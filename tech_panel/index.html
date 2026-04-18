@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>MOM IT Helpdesk — Technician</title>
+<style>
+:root{
+  --blue:#2563EB;--blue-dk:#1D4ED8;--blue-lt:#EFF6FF;
+  --page:#F1F5F9;--card:#FFFFFF;--row2:#F8FAFC;
+  --txt:#1E293B;--muted:#64748B;--border:#E2E8F0;
+  --red:#EF4444;--amber:#F59E0B;--green:#10B981;
+  --font:system-ui,"Segoe UI",Arial,sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);font-size:14px;color:var(--txt);background:var(--page);min-width:900px}
+button{cursor:pointer;font-family:inherit;font-size:13px}
+input,select,textarea{font-family:inherit;font-size:13px;color:var(--txt)}
+.hidden{display:none!important}
+.w100{width:100%}.mt1{margin-top:4px}.mt2{margin-top:8px}
+.sm{font-size:12px}.muted{color:var(--muted)}
+
+/* Login */
+#loginScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:16px}
+.login-box{background:var(--card);border:1px solid var(--border);border-radius:12px;
+  padding:40px 36px;width:440px;box-shadow:0 4px 24px rgba(0,0,0,.08)}
+.login-box h1{font-size:18px;font-weight:800;text-align:center;line-height:1.4}
+.login-box .sub{text-align:center;color:var(--muted);font-size:13px;margin-top:4px}
+.fgrp{display:flex;flex-direction:column;gap:5px;margin-top:14px}
+.flbl{font-size:13px;font-weight:600}
+.finp{padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:#fff;outline:none;transition:border-color .15s;width:100%}
+.finp:focus{border-color:var(--blue)}
+#loginErr{padding:10px 14px;background:#FEF2F2;border:1px solid #FECACA;border-radius:6px;
+  color:var(--red);font-size:12px;margin-top:10px;white-space:pre-wrap;line-height:1.6}
+.btn{display:inline-flex;align-items:center;justify-content:center;
+  padding:8px 16px;border:none;border-radius:8px;font-weight:600;transition:background .15s;gap:5px}
+.btn-blue{background:var(--blue);color:#fff}.btn-blue:hover{background:var(--blue-dk)}
+.btn-ghost{background:var(--page);color:var(--txt);border:1px solid var(--border)}
+.btn-ghost:hover{background:var(--border)}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-xs{padding:3px 8px;font-size:11px}
+
+/* Topbar */
+#topbar{background:var(--blue);color:#fff;height:52px;padding:0 20px;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:200;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.tb-left{font-size:14px;font-weight:700}
+.tb-center{font-size:11px;color:rgba(255,255,255,.7)}
+.tb-right{display:flex;align-items:center;gap:10px}
+.role-pill{background:rgba(255,255,255,.2);padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase}
+.logout-btn{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:6px;padding:4px 11px;font-size:12px}
+.logout-btn:hover{background:rgba(255,255,255,.2)}
+
+/* Notification Bell */
+.notif-wrap{position:relative}
+.notif-bell-btn{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.3);
+  color:#fff;border-radius:6px;padding:4px 11px;font-size:16px;line-height:1;
+  display:flex;align-items:center;gap:4px}
+.notif-bell-btn:hover{background:rgba(255,255,255,.25)}
+.notif-badge{background:#EF4444;color:#fff;font-size:10px;font-weight:800;
+  min-width:17px;height:17px;border-radius:10px;display:inline-flex;
+  align-items:center;justify-content:center;padding:0 4px}
+.notif-panel{position:absolute;top:calc(100% + 10px);right:0;width:340px;
+  background:#fff;border:1px solid var(--border);border-radius:10px;
+  box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:500;overflow:hidden}
+.notif-panel-hdr{display:flex;align-items:center;justify-content:space-between;
+  padding:10px 14px;border-bottom:1px solid var(--border);background:var(--page)}
+.notif-panel-hdr span{font-size:13px;font-weight:700}
+.notif-mark-all{font-size:11px;color:var(--blue);background:none;border:none;padding:2px 6px;border-radius:4px}
+.notif-mark-all:hover{background:var(--blue-lt)}
+.notif-list{max-height:300px;overflow-y:auto}
+.notif-empty{text-align:center;padding:24px;color:var(--muted);font-size:12px}
+.notif-item{padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s;display:flex;gap:9px}
+.notif-item:hover{background:var(--blue-lt)}
+.notif-item.unread{background:#F0F9FF}
+.notif-dot{width:8px;height:8px;border-radius:50%;background:transparent;flex-shrink:0;margin-top:4px;border:2px solid var(--border)}
+.notif-item.unread .notif-dot{background:var(--blue)}
+.notif-content{flex:1;min-width:0}
+.notif-msg{font-size:12px;line-height:1.4;margin-bottom:2px}
+.notif-time{font-size:10px;color:var(--muted)}
+.ws-dot{width:7px;height:7px;border-radius:50%;background:#9CA3AF;display:inline-block;margin-right:4px}
+.ws-dot.on{background:var(--green)}
+
+/* Page */
+.page{padding:20px 22px}
+
+/* Summary banner for technician */
+.summary-bar{display:flex;gap:12px;margin-bottom:16px}
+.summ-card{background:var(--card);border:1px solid var(--border);border-radius:10px;
+  padding:14px 18px;flex:1;border-left:4px solid transparent}
+.summ-card.s-active{border-left-color:var(--red)}
+.summ-card.s-inprog{border-left-color:var(--amber)}
+.summ-card.s-resolved{border-left-color:var(--green)}
+.summ-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+.summ-num{font-size:28px;font-weight:800;line-height:1;margin-top:3px}
+
+/* Filter bar */
+.filter-bar{background:var(--card);border:1px solid var(--border);border-radius:10px;
+  padding:10px 16px;margin-bottom:14px;display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.filter-bar select{padding:5px 9px;border:1px solid var(--border);border-radius:7px;background:#fff;height:32px;font-size:12px;outline:none}
+.filter-bar select:focus{border-color:var(--blue)}
+
+/* Table */
+.tbl-card{background:var(--card);border:1px solid var(--border);border-radius:10px}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:700px}
+thead th{background:var(--blue);color:#fff;padding:10px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
+tbody tr:nth-child(odd){background:var(--card)}
+tbody tr:nth-child(even){background:var(--row2)}
+tbody tr:hover{background:#EFF6FF;cursor:pointer}
+tbody td{padding:9px 12px;font-size:12px;vertical-align:middle;border-bottom:1px solid var(--border);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+.empty-row td{text-align:center;padding:40px;color:var(--muted);font-size:14px;white-space:normal}
+.badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap;text-transform:capitalize}
+.b-active{background:#FEF2F2;color:#B91C1C}
+.b-in_progress{background:#FFFBEB;color:#92400E}
+.b-resolved{background:#ECFDF5;color:#065F46}
+.pagination{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-top:1px solid var(--border)}
+.pg-info{font-size:12px;color:var(--muted)}
+.pg-btns{display:flex;gap:4px}
+.pg-btn{padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:#fff;font-size:12px;min-width:32px}
+.pg-btn:hover:not(:disabled){background:var(--page)}
+.pg-btn:disabled{opacity:.4;cursor:default}
+.pg-btn.active-pg{background:var(--blue);color:#fff;border-color:var(--blue)}
+
+/* Modal */
+#modalOverlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;
+  display:flex;align-items:flex-start;justify-content:center;padding:28px 16px;overflow-y:auto}
+.modal{background:var(--card);border-radius:12px;width:100%;max-width:900px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.modal-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border)}
+.modal-hdr h2{font-size:15px;font-weight:700}
+.modal-close{background:none;border:none;font-size:20px;color:var(--muted);cursor:pointer;padding:2px 7px;border-radius:6px}
+.modal-close:hover{background:var(--page)}
+.modal-body{display:grid;grid-template-columns:1fr 280px}
+.modal-left{padding:18px 20px;border-right:1px solid var(--border);overflow-y:auto;max-height:calc(88vh - 52px)}
+.modal-right{padding:18px 20px;overflow-y:auto;max-height:calc(88vh - 52px);display:flex;flex-direction:column;gap:14px}
+.dgrid{display:grid;grid-template-columns:110px 1fr;gap:6px 10px;font-size:13px}
+.dk{color:var(--muted);font-weight:600;font-size:11px;padding-top:2px;text-transform:uppercase;letter-spacing:.3px}
+.dv{word-break:break-word}
+.ablock{background:var(--page);border:1px solid var(--border);border-radius:8px;padding:12px}
+.ablock-title{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:8px}
+.msg{font-size:12px;padding:5px 9px;border-radius:6px;margin-top:5px}
+.msg-ok{background:#ECFDF5;color:#065F46;border:1px solid #A7F3D0}
+.msg-err{background:#FEF2F2;color:#B91C1C;border:1px solid #FECACA}
+#statusSel.v-active{border-color:var(--red)!important;color:#B91C1C}
+#statusSel.v-in_progress{border-color:var(--amber)!important;color:#92400E}
+#statusSel.v-resolved{border-color:var(--green)!important;color:#065F46}
+.note{background:#fff;border:1px solid var(--border);border-radius:7px;padding:9px 11px;margin-bottom:7px}
+.note-meta{font-size:11px;color:var(--muted);margin-bottom:3px}
+.note-body{font-size:13px;white-space:pre-wrap}
+textarea.note-inp{width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:7px;resize:vertical;min-height:56px;outline:none;font-size:13px}
+textarea.note-inp:focus{border-color:var(--blue)}
+.attach-list{margin-top:6px}
+.attach-item{display:flex;align-items:center;justify-content:space-between;padding:5px 8px;background:#fff;border:1px solid var(--border);border-radius:6px;margin-bottom:5px;font-size:12px}
+.attach-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px}
+.pw-stack{display:flex;flex-direction:column;gap:6px}
+.info-banner{background:var(--blue-lt);border:1px solid #BFDBFE;border-radius:8px;padding:10px 14px;
+  font-size:12px;color:#1D4ED8;margin-bottom:14px}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-box">
+    <h1>Medical Offices of Manhattan<br>IT Helpdesk</h1>
+    <div class="sub">Technician Portal</div>
+    <div class="fgrp"><label class="flbl">Username</label>
+      <input class="finp" id="lu" type="text" placeholder="technician" autocomplete="username"/></div>
+    <div class="fgrp"><label class="flbl">Password</label>
+      <input class="finp" id="lp" type="password" placeholder="••••••••" autocomplete="current-password"/></div>
+    <div class="fgrp"><button class="btn btn-blue w100" onclick="doLogin()">Login</button></div>
+    <div id="loginErr" class="hidden"></div>
+    <div style="text-align:center;margin-top:12px;font-size:12px;color:var(--muted)">
+      Admin? <a href="/admin" style="color:var(--blue)">Go to Admin Panel →</a>
+    </div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dash" class="hidden">
+  <div id="topbar">
+    <div class="tb-left">Medical Offices of Manhattan — IT Helpdesk</div>
+    <div class="tb-center">Last updated: <span id="lastUpd">—</span></div>
+    <div class="tb-right">
+      <!-- Notification Bell -->
+      <div class="notif-wrap" id="notifWrap">
+        <button class="notif-bell-btn" onclick="toggleNotifPanel(event)" title="Notifications">
+          <span id="wsDot" class="ws-dot"></span>🔔
+          <span class="notif-badge hidden" id="notifBadge">0</span>
+        </button>
+        <div class="notif-panel hidden" id="notifPanel">
+          <div class="notif-panel-hdr">
+            <span>Notifications</span>
+            <button class="notif-mark-all" onclick="markAllRead()">Mark all read</button>
+          </div>
+          <div class="notif-list" id="notifList"><div class="notif-empty">Loading…</div></div>
+        </div>
+      </div>
+      <span id="tbUser" style="font-size:12px;color:rgba(255,255,255,.85)"></span>
+      <span class="role-pill">TECHNICIAN</span>
+      <button class="logout-btn" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:6px;padding:4px 11px;font-size:12px" onclick="openAccount()" title="My Account">👤 Account</button>
+      <button class="logout-btn" onclick="doLogout()">Logout</button>
+    </div>
+  </div>
+
+  <div class="page">
+    <!-- Summary cards -->
+    <div class="summary-bar">
+      <div class="summ-card s-active">
+        <div class="summ-lbl">My Active</div>
+        <div class="summ-num" id="nActive">—</div>
+      </div>
+      <div class="summ-card s-inprog">
+        <div class="summ-lbl">In Progress</div>
+        <div class="summ-num" id="nInProg">—</div>
+      </div>
+      <div class="summ-card s-resolved">
+        <div class="summ-lbl">Resolved</div>
+        <div class="summ-num" id="nResolved">—</div>
+      </div>
+    </div>
+
+    <div class="info-banner">
+      ℹ️ You are viewing tickets assigned to you. Contact your admin to assign new tickets.
+    </div>
+
+    <!-- Filter bar -->
+    <div class="filter-bar">
+      <select id="fStatus" onchange="applyFilter()">
+        <option value="">All Statuses</option>
+        <option value="active">Active</option>
+        <option value="in_progress">In Progress</option>
+        <option value="resolved">Resolved</option>
+      </select>
+      <select id="fCat" onchange="applyFilter()">
+        <option value="">All Categories</option>
+        <option>Other</option><option>Computer / Workstation</option>
+        <option>Network / Internet / WiFi</option><option>Printer</option>
+        <option>Scanner</option><option>Phone / VoIP</option>
+        <option>Browser</option><option>Software / Application</option>
+        <option>Email</option><option>VPN / Remote Access</option>
+        <option>Hardware</option><option>File Access / Permissions</option>
+        <option>Performance Issues</option>
+      </select>
+      <button class="btn btn-ghost btn-sm" onclick="resetFilter()">⟳ Show All</button>
+    </div>
+
+    <!-- Table -->
+    <div class="tbl-card">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>Ticket ID</th><th>User</th><th>Hostname</th>
+            <th>Category</th><th>Status</th><th>Created</th><th></th>
+          </tr></thead>
+          <tbody id="tBody"><tr class="empty-row"><td colspan="7">Loading…</td></tr></tbody>
+        </table>
+      </div>
+      <div class="pagination">
+        <div class="pg-info" id="pgInfo">—</div>
+        <div class="pg-btns" id="pgBtns"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TICKET MODAL -->
+<div id="modalOverlay" class="hidden" onclick="ovClick(event)">
+ <div class="modal" onclick="event.stopPropagation()">
+  <div class="modal-hdr">
+    <h2 id="mTitle">Ticket Detail</h2>
+    <button class="modal-close" onclick="closeModal()">✕</button>
+  </div>
+  <div class="modal-body">
+   <div class="modal-left">
+     <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:10px">Ticket Information</div>
+     <div class="dgrid" id="mGrid"><div style="grid-column:span 2" class="muted">Loading…</div></div>
+     <div style="margin-top:16px">
+       <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:8px">Attachments</div>
+       <div id="attachList"><div class="muted sm">Loading…</div></div>
+     </div>
+     <div style="margin-top:16px">
+       <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:8px">Internal Notes</div>
+       <div id="notesList"><div class="muted sm">Loading…</div></div>
+       <textarea class="note-inp mt2" id="noteText" placeholder="Add an internal note…"></textarea>
+       <button class="btn btn-ghost btn-sm mt1" onclick="addNote()">Add Note</button>
+       <div id="noteMsg" class="hidden"></div>
+     </div>
+   </div>
+   <div class="modal-right">
+     <!-- Status update (technician can update ONLY assigned tickets) -->
+     <div class="ablock">
+       <div class="ablock-title">Update Status</div>
+       <select class="finp w100" id="statusSel" onchange="colorSel()">
+         <option value="active">Active</option>
+         <option value="in_progress">In Progress</option>
+         <option value="resolved">Resolved</option>
+       </select>
+       <button class="btn btn-blue btn-sm w100 mt2" onclick="doStatus()">Save Status</button>
+       <div id="statusMsg" class="hidden"></div>
+     </div>
+   </div>
+  </div>
+ </div>
+</div>
+
+<!-- ACCOUNT MODAL -->
+<div id="acctOverlay" class="hidden" onclick="acctOvClick(event)"
+  style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:600;display:flex;align-items:center;justify-content:center;padding:28px 16px">
+  <div class="modal" style="max-width:400px;width:100%" onclick="event.stopPropagation()">
+    <div class="modal-hdr">
+      <h2>My Account</h2>
+      <button class="modal-close" onclick="closeAccount()">✕</button>
+    </div>
+    <div style="padding:20px">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px">
+        Logged in as <strong id="acctUser"></strong> &nbsp;<span class="role-pill" style="background:var(--page);color:var(--muted);border:1px solid var(--border)">TECHNICIAN</span>
+      </div>
+      <div class="ablock">
+        <div class="ablock-title">Change Password</div>
+        <div class="pw-stack">
+          <input class="finp" id="pwCur" type="password" placeholder="Current password"/>
+          <input class="finp" id="pwNew" type="password" placeholder="New password (min 8)"/>
+          <input class="finp" id="pwCfm" type="password" placeholder="Confirm password"/>
+        </div>
+        <button class="btn btn-ghost btn-sm w100 mt2" onclick="doPw()">Change Password</button>
+        <div id="pwMsg" class="hidden"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+//  CONFIG — set your server IP here
+// ═══════════════════════════════════════════
+const API = "http://YOUR_SERVER_IP:8000";
+
+// ═══════════════════════════════════════════
+//  Session
+// ═══════════════════════════════════════════
+const SESSION_KEY = "mom_tech_session";
+const IDLE_MS = 60 * 60 * 1000;
+
+let S = loadSession();
+let curTicket = null;
+let allTickets = [];
+let filtered = [];
+let curPage = 1;
+const pageSize = 15;
+let timer = null;
+
+function loadSession(){
+  try{
+    const raw=sessionStorage.getItem(SESSION_KEY);
+    if(!raw) return {token:null,role:null,user:null};
+    const obj=JSON.parse(raw);
+    if(obj.expiresAt&&Date.now()>obj.expiresAt){sessionStorage.removeItem(SESSION_KEY);return{token:null,role:null,user:null};}
+    return obj;
+  }catch{return{token:null,role:null,user:null};}
+}
+function saveSession(d){sessionStorage.setItem(SESSION_KEY,JSON.stringify({...d,expiresAt:Date.now()+IDLE_MS}));}
+function clearSession(){sessionStorage.removeItem(SESSION_KEY);}
+
+// ═══════════════════════════════════════════
+//  Utilities
+// ═══════════════════════════════════════════
+const $=id=>document.getElementById(id);
+const show=id=>$(id).classList.remove("hidden");
+const hide=id=>$(id).classList.add("hidden");
+function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+function fmt(dt){
+  if(!dt) return "—";
+  try{const d=new Date(dt.endsWith("Z")?dt:dt+"Z");
+    return d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})+" "+d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+  }catch{return dt;}
+}
+function fmtAgo(dt){
+  if(!dt) return "";
+  try{const diff=Date.now()-new Date(dt.endsWith("Z")?dt:dt+"Z").getTime();
+    const m=Math.floor(diff/60000);
+    if(m<1) return "just now"; if(m<60) return m+"m ago"; if(m<1440) return Math.floor(m/60)+"h ago"; return Math.floor(m/1440)+"d ago";
+  }catch{return "";}
+}
+function fmtBytes(b){if(!b)return"";if(b<1024)return b+"B";if(b<1048576)return(b/1024).toFixed(1)+"KB";return(b/1048576).toFixed(1)+"MB";}
+function badge(st){const m={"active":"b-active","in_progress":"b-in_progress","resolved":"b-resolved"};return`<span class="badge ${m[st]||"b-active"}">${(st||"").replace(/_/g," ")}</span>`;}
+async function apiFetch(path,opts={}){
+  const r=await fetch(API.replace(/\/$/,"")+path,opts);
+  if(!r.ok){let m="Error "+r.status;try{const b=await r.json();m=b.detail||m;}catch{}throw new Error(m);}
+  return r.json();
+}
+function authH(){return{"Content-Type":"application/json","Authorization":"Bearer "+S.token};}
+function flash(id,txt,ok){const el=$(id);el.textContent=txt;el.className="msg "+(ok?"msg-ok":"msg-err");show(id);setTimeout(()=>hide(id),5000);}
+
+// ═══════════════════════════════════════════
+//  Auth
+// ═══════════════════════════════════════════
+async function doLogin(){
+  const u=$("lu").value.trim(),p=$("lp").value;
+  hide("loginErr");
+  if(!u||!p){showLE("Enter username and password.");return;}
+  if(API.includes("YOUR_SERVER_IP")){showLE("❌ Set the API URL at the top of this file.");return;}
+  const btn=document.querySelector('button[onclick="doLogin()"]');
+  if(btn){btn.disabled=true;btn.textContent="Logging in…";}
+  try{
+    const d=await apiFetch("/auth/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:u,password:p})});
+    if(d.role!=="technician"&&d.role!=="super_admin"){showLE("Access denied. This portal is for technicians.\nAdmins: use /admin");return;}
+    if(d.role==="super_admin"){
+      // Redirect super_admin to admin panel
+      window.location.href="/admin";
+      return;
+    }
+    S={token:d.access_token,role:d.role,user:d.username};
+    saveSession(S);
+    initDashboard();
+  }catch(e){
+    let msg=e.message;
+    if(msg.includes("Failed to fetch")||msg.includes("ERR_")) msg="❌ Cannot reach server at: "+API;
+    else if(msg.includes("401")) msg="❌ Wrong username or password.";
+    showLE(msg);
+  }finally{if(btn){btn.disabled=false;btn.textContent="Login";}}
+}
+function showLE(m){$("loginErr").textContent=m;show("loginErr");}
+
+function doLogout(){
+  S={token:null,role:null,user:null};clearSession();
+  if(timer)clearInterval(timer);
+  closeWS();
+  hide("dash");show("loginScreen");
+  $("lp").value="";hide("loginErr");
+}
+
+function initDashboard(){
+  $("tbUser").textContent=S.user;
+  hide("loginScreen");show("dash");
+  loadTickets();
+  timer=setInterval(loadTickets,30000);
+  initNotifications();
+}
+
+window.addEventListener("load",()=>{if(S.token)initDashboard();});
+$("lp").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});
+$("lu").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});
+
+// ═══════════════════════════════════════════
+//  Tickets
+// ═══════════════════════════════════════════
+async function loadTickets(){
+  try{
+    allTickets=await apiFetch("/tickets/",{headers:authH()});
+    updateCounts();
+    applyFilter();
+    $("lastUpd").textContent=new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+  }catch(e){$("tBody").innerHTML=`<tr class="empty-row"><td colspan="7">Error: ${esc(e.message)}</td></tr>`;}
+}
+
+function updateCounts(){
+  const c={active:0,in_progress:0,resolved:0};
+  allTickets.forEach(t=>{if(c[t.status]!==undefined)c[t.status]++;});
+  $("nActive").textContent=c.active;
+  $("nInProg").textContent=c.in_progress;
+  $("nResolved").textContent=c.resolved;
+}
+
+function applyFilter(){
+  const st=$("fStatus").value, cat=$("fCat").value;
+  filtered=allTickets.filter(t=>{
+    if(st&&t.status!==st) return false;
+    if(cat&&t.category!==cat) return false;
+    return true;
+  });
+  curPage=1;renderTable();
+}
+
+function resetFilter(){$("fStatus").value="";$("fCat").value="";applyFilter();}
+
+function renderTable(){
+  const tb=$("tBody");
+  if(!filtered.length){
+    tb.innerHTML=`<tr class="empty-row"><td colspan="7">No assigned tickets match the current filter.</td></tr>`;
+    $("pgInfo").textContent="No tickets";$("pgBtns").innerHTML="";return;
+  }
+  const total=filtered.length, pages=Math.ceil(total/pageSize);
+  if(curPage>pages) curPage=pages;
+  const s=(curPage-1)*pageSize, e=Math.min(s+pageSize,total);
+  tb.innerHTML=filtered.slice(s,e).map(t=>`
+    <tr onclick="openModal('${esc(t.id)}')">
+      <td><code style="font-size:11px;font-weight:700">${esc(t.id)}</code></td>
+      <td>${esc(t.username||"—")}</td>
+      <td>${esc(t.hostname||"—")}</td>
+      <td>${esc(t.category)}</td>
+      <td>${badge(t.status)}</td>
+      <td>${fmt(t.created_at)}</td>
+      <td><button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();openModal('${esc(t.id)}')">Open</button></td>
+    </tr>`).join("");
+  $("pgInfo").textContent=`Showing ${s+1}–${e} of ${total}`;
+  renderPgBtns(pages);
+}
+
+function renderPgBtns(total){
+  const c=$("pgBtns");c.innerHTML="";
+  const p=document.createElement("button");p.className="pg-btn";p.textContent="‹";p.disabled=curPage<=1;
+  p.onclick=()=>{curPage--;renderTable();};c.appendChild(p);
+  for(let i=1;i<=Math.min(total,5);i++){const b=document.createElement("button");b.className="pg-btn"+(i===curPage?" active-pg":"");b.textContent=i;b.onclick=(()=>{const pg=i;return()=>{curPage=pg;renderTable();};})();c.appendChild(b);}
+  const n=document.createElement("button");n.className="pg-btn";n.textContent="›";n.disabled=curPage>=total;
+  n.onclick=()=>{curPage++;renderTable();};c.appendChild(n);
+}
+
+// ═══════════════════════════════════════════
+//  Modal
+// ═══════════════════════════════════════════
+async function openModal(id){
+  curTicket=id;
+  $("mTitle").textContent="Loading…";
+  $("mGrid").innerHTML=`<div style="grid-column:span 2" class="muted">Loading…</div>`;
+  $("notesList").innerHTML=`<div class="muted sm">Loading…</div>`;
+  $("attachList").innerHTML=`<div class="muted sm">Loading…</div>`;
+  $("noteText").value="";
+  ["statusMsg","noteMsg"].forEach(i=>hide(i));
+  show("modalOverlay");
+  await Promise.all([loadDetail(id),loadNotes(id),loadAttachments(id)]);
+}
+
+async function loadDetail(id){
+  try{
+    const t=await apiFetch("/tickets/"+id,{headers:authH()});
+    $("mTitle").textContent="Ticket: "+t.id;
+    $("mGrid").innerHTML=[
+      ["Ticket ID",`<code style="font-weight:700">${esc(t.id)}</code>`],
+      ["Status",badge(t.status)],
+      ["User",esc(t.username||"—")],
+      ["Hostname",esc(t.hostname||"—")],
+      ["IP",esc(t.ip_address||"—")],
+      ["Category",`<strong>${esc(t.category)}</strong>`],
+      ["Sub-Cat",esc(t.sub_category||"—")],
+      ["Description",t.description?`<span style="white-space:pre-wrap">${esc(t.description)}</span>`:`<span class="muted">—</span>`],
+      ["Created",fmt(t.created_at)],["Updated",fmt(t.updated_at)],
+    ].map(([k,v])=>`<div class="dk">${k}</div><div class="dv">${v}</div>`).join("");
+    $("statusSel").value=t.status;colorSel();
+  }catch(e){$("mGrid").innerHTML=`<div style="grid-column:span 2;color:var(--red)">${esc(e.message)}</div>`;}
+}
+
+async function loadNotes(id){
+  const el=$("notesList");
+  try{
+    const notes=await apiFetch("/tickets/"+id+"/notes",{headers:authH()});
+    if(!notes||!notes.length){el.innerHTML=`<div class="muted sm">No notes yet.</div>`;return;}
+    el.innerHTML=notes.map(n=>`<div class="note"><div class="note-meta"><strong>${esc(n.admin_username||"?")}</strong> — ${fmt(n.created_at)}</div><div class="note-body">${esc(n.content)}</div></div>`).join("");
+  }catch(e){el.innerHTML=`<div style="color:var(--red);font-size:12px">${esc(e.message)}</div>`;}
+}
+
+async function loadAttachments(id){
+  const el=$("attachList");
+  try{
+    const items=await apiFetch("/tickets/"+id+"/attachments",{headers:authH()});
+    if(!items||!items.length){el.innerHTML=`<div class="muted sm">No attachments.</div>`;return;}
+    el.innerHTML=`<div class="attach-list">`+items.map(a=>`
+      <div class="attach-item">
+        <span class="attach-name" title="${esc(a.filename)}">📎 ${esc(a.filename)}</span>
+        <span class="muted sm">${fmtBytes(a.size_bytes)}</span>
+        <button class="btn btn-ghost btn-xs"
+          onclick="downloadAttachment(${a.id},'${esc(a.filename)}')">⬇ Download</button>
+      </div>`).join("")+`</div>`;
+  }catch{el.innerHTML=`<div class="muted sm">Error loading attachments.</div>`;}
+}
+
+function downloadAttachment(id, filename){
+  const url = API.replace(/\/$/,"")
+    + "/attachments/" + id + "/download"
+    + "?token=" + encodeURIComponent(S.token);
+  const a = document.createElement("a");
+  a.href     = url;
+  a.download = filename || "attachment";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+function colorSel(){$("statusSel").className="finp w100 v-"+$("statusSel").value;}
+
+async function doStatus(){
+  const status=$("statusSel").value;
+  try{
+    await apiFetch("/tickets/"+curTicket+"/status",{method:"PATCH",headers:authH(),body:JSON.stringify({status})});
+    flash("statusMsg","✓ Status updated: "+status.replace(/_/g," "),true);
+    await loadDetail(curTicket);loadTickets();
+  }catch(e){flash("statusMsg","Error: "+e.message,false);}
+}
+
+async function addNote(){
+  const content=$("noteText").value.trim();
+  if(!content){flash("noteMsg","Note cannot be empty.",false);return;}
+  try{
+    await apiFetch("/tickets/"+curTicket+"/notes",{method:"POST",headers:authH(),body:JSON.stringify({content})});
+    $("noteText").value="";flash("noteMsg","✓ Note added.",true);loadNotes(curTicket);
+  }catch(e){flash("noteMsg","Error: "+e.message,false);}
+}
+
+async function doPw(){
+  const cp=$("pwCur").value,np=$("pwNew").value,cf=$("pwCfm").value;
+  if(!cp||!np||!cf){flash("pwMsg","All fields required.",false);return;}
+  if(np!==cf){flash("pwMsg","Passwords don't match.",false);return;}
+  if(np.length<8){flash("pwMsg","Min 8 characters.",false);return;}
+  try{
+    await apiFetch("/auth/change-password",{method:"PATCH",headers:authH(),body:JSON.stringify({current_password:cp,new_password:np})});
+    ["pwCur","pwNew","pwCfm"].forEach(i=>$(i).value="");flash("pwMsg","✓ Password changed.",true);
+  }catch(e){flash("pwMsg","Error: "+e.message,false);}
+}
+
+function closeModal(){hide("modalOverlay");curTicket=null;}
+function ovClick(e){if(e.target===$("modalOverlay"))closeModal();}
+
+function openAccount(){
+  $("acctUser").textContent=S.user||"";
+  ["pwCur","pwNew","pwCfm"].forEach(i=>$(i).value="");
+  hide("pwMsg");
+  show("acctOverlay");
+}
+function closeAccount(){hide("acctOverlay");}
+function acctOvClick(e){if(e.target===$("acctOverlay"))closeAccount();}
+
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"){
+    if(!$("modalOverlay").classList.contains("hidden")) closeModal();
+    if(!$("acctOverlay").classList.contains("hidden")) closeAccount();
+  }
+});
+
+
+
+// ═══════════════════════════════════════════
+//  Notifications
+// ═══════════════════════════════════════════
+let ws=null, wsTimer=null, notifOpen=false;
+
+function initNotifications(){
+  loadNotifications();connectWS();
+  setInterval(loadUnreadCount,30000);
+}
+
+function connectWS(){
+  if(!S.token) return;
+  const wsBase=API.replace(/^http/,"ws");
+  try{
+    ws=new WebSocket(`${wsBase}/ws/notifications?token=${encodeURIComponent(S.token)}`);
+    ws.onopen=()=>{$("wsDot").classList.add("on");clearTimeout(wsTimer);ws._ping=setInterval(()=>{if(ws&&ws.readyState===1)ws.send("ping");},25000);};
+    ws.onmessage=e=>{try{const d=JSON.parse(e.data);if(d.type==="pong")return;loadNotifications();showToast(d.message||"New notification");}catch{}};
+    ws.onclose=()=>{$("wsDot").classList.remove("on");clearInterval(ws._ping);wsTimer=setTimeout(connectWS,5000);};
+    ws.onerror=()=>ws.close();
+  }catch{}
+}
+function closeWS(){if(ws){ws.close();ws=null;}clearTimeout(wsTimer);}
+
+async function loadUnreadCount(){
+  if(!S.token) return;
+  try{const d=await apiFetch("/notifications/my/unread-count",{headers:authH()});updateBadge(d.unread_count||0);}catch{}
+}
+async function loadNotifications(){
+  await loadUnreadCount();
+  if(!notifOpen) return;
+  try{
+    const items=await apiFetch("/notifications/my?limit=25",{headers:authH()});
+    const el=$("notifList");
+    if(!items||!items.length){el.innerHTML='<div class="notif-empty">No notifications yet.</div>';return;}
+    el.innerHTML=items.map(n=>`
+      <div class="notif-item ${n.is_read?'':'unread'}" onclick="readNotif(${n.id},'${esc(n.ticket_id)}')">
+        <div class="notif-dot"></div>
+        <div class="notif-content">
+          <div class="notif-msg">${esc(n.message)}</div>
+          <div class="notif-time">${fmtAgo(n.created_at)} · ${esc(n.ticket_id)}</div>
+        </div>
+      </div>`).join("");
+  }catch{}
+}
+function updateBadge(n){const b=$("notifBadge");if(n>0){b.textContent=n>99?"99+":n;show("notifBadge");}else hide("notifBadge");}
+function toggleNotifPanel(e){e.stopPropagation();notifOpen=!notifOpen;const p=$("notifPanel");if(notifOpen){p.classList.remove("hidden");loadNotifications();}else p.classList.add("hidden");}
+document.addEventListener("click",e=>{if(!$("notifWrap").contains(e.target)){notifOpen=false;$("notifPanel").classList.add("hidden");}});
+async function readNotif(id,ticketId){try{await apiFetch(`/notifications/${id}/read`,{method:"PATCH",headers:authH()});loadNotifications();}catch{}if(ticketId){$("notifPanel").classList.add("hidden");notifOpen=false;openModal(ticketId);}}
+async function markAllRead(){try{await apiFetch("/notifications/read-all",{method:"PATCH",headers:authH()});loadNotifications();}catch{}}
+function showToast(msg){const t=document.createElement("div");t.style.cssText="position:fixed;bottom:24px;right:24px;background:#1E293B;color:#fff;padding:12px 18px;border-radius:8px;font-size:13px;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.3);max-width:320px;line-height:1.4";t.textContent="🔔 "+msg;document.body.appendChild(t);setTimeout(()=>t.remove(),4000);}
+</script>
+</body>
+</html>

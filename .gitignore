@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# Database (contains live data — do not commit)
+backend/helpdesk.db
+
+# PyInstaller
+client_app/dist/
+client_app/build/
+*.spec.bak
+
+# Logs & runtime files
+logs/
+stop_server.sh
+stop_server.bat
+mom_server_daemon.pyw
+
+# macOS
+.DS_Store
+
+# VSCode
+.vscode/
+
+# Environment / secrets
+.env
