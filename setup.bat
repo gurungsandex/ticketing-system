@@ -89,15 +89,14 @@ echo  OK.
 echo.
 
 REM ── 6. Find pythonw.exe ───────────────────────────────────────
-set "PYTHONW="
+set "PYTHON_EXE="
 for /f "tokens=*" %%p in ('where python 2^>nul') do (
-    if not defined PYTHONW set "PYTHONW=%%~dppythonw.exe"
+    if not defined PYTHON_EXE set "PYTHON_EXE=%%p"
 )
+set "PYTHONW=%PYTHON_EXE:python.exe=pythonw.exe%"
 if not exist "%PYTHONW%" (
     echo  WARN: pythonw.exe not found — using python.exe (window may flash briefly)
-    for /f "tokens=*" %%p in ('where python 2^>nul') do (
-        if not defined PYTHONW set "PYTHONW=%%p"
-    )
+    set "PYTHONW=%PYTHON_EXE%"
 )
 
 REM ── 7. Write stop_server.bat ─────────────────────────────────
