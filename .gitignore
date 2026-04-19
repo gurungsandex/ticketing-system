@@ -21,7 +21,6 @@ client_app/build/
 logs/
 stop_server.sh
 stop_server.bat
-mom_server_daemon.pyw
 
 # macOS
 .DS_Store
