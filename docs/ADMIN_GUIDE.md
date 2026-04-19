@@ -339,31 +339,63 @@ After changing the port, also update:
 
 ### Set a Strong JWT Secret Key
 
-The default secret key in `backend/auth.py` must be replaced before going live. The key is read from the `SECRET_KEY` environment variable if set.
+Every login token is cryptographically signed with `SECRET_KEY`. If this key is left as the default, anyone who has read the source code can forge admin tokens and gain full access to the system. **This must be set before going live.**
 
-Generate a secure random key:
+#### Step 1 — Generate a secure random key
 
 **Windows:**
 ```cmd
 python -c "import secrets; print(secrets.token_hex(32))"
 ```
 
-**macOS:**
+**macOS / Linux:**
 ```bash
 python3 -c "import secrets; print(secrets.token_hex(32))"
 ```
 
-Set it as an environment variable before starting the server:
+Copy the 64-character string that is printed. Example output:
+```
+49c03dd0ca41871d54298d73009b94823921fdb4b8a68403aab2cfc27be5c0b1
+```
 
-**Windows (setup.bat):** Add before launching, or set it in your system environment variables.
+#### Step 2 — Set the key in your environment
 
-**macOS (setup.sh):**
+Choose **one** method that matches how you run the server:
+
+---
+
+**Option A — Environment variable (simplest, any OS)**
+
+Windows (Command Prompt, before starting the server):
+```cmd
+set SECRET_KEY=your-generated-key-here
+setup.bat
+```
+
+macOS / Linux (Terminal, before starting the server):
 ```bash
 export SECRET_KEY="your-generated-key-here"
 ./setup.sh
 ```
 
-**PM2 (recommended):** Add to `ecosystem.config.js` under `env`:
+---
+
+**Option B — `.env` file (recommended for manual deployments)**
+
+Create a file named `.env` in the project root (next to `setup.bat` / `setup.sh`):
+
+```
+SECRET_KEY=your-generated-key-here
+```
+
+The server loads this file automatically on startup via `python-dotenv`. Never commit this file to git — it is already excluded in `.gitignore`.
+
+---
+
+**Option C — PM2 `ecosystem.config.js` (recommended for production services)**
+
+Open `ecosystem.config.js` and add `SECRET_KEY` under `env`:
+
 ```javascript
 env: {
   HOST: "0.0.0.0",
@@ -371,6 +403,25 @@ env: {
   SECRET_KEY: "your-generated-key-here",
 },
 ```
+
+Then restart the service:
+```bash
+pm2 restart helpdesk
+```
+
+---
+
+#### Step 3 — Verify the key is active
+
+Start the server and check that the warning is **not** shown in the output:
+
+```
+[WARNING] SECRET_KEY is not set — using insecure default.
+```
+
+If that warning appears, the key was not picked up. Re-check the method you chose in Step 2 and restart the server.
+
+> **Important:** If you change `SECRET_KEY` after users are already logged in, all existing sessions will be invalidated and users will need to log in again. This is expected behaviour.
 
 ### Restrict CORS to Your Server IP
 

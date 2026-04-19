@@ -14,6 +14,8 @@ Run via PM2 (background service):
 """
 import os
 import logging
+from dotenv import load_dotenv
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env'))
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 from typing import Union
@@ -76,6 +78,15 @@ async def lifespan(application: FastAPI):
     scheduler = BackgroundScheduler(daemon=True)
     scheduler.add_job(_cleanup_old_records, "cron", hour=2, minute=0)
     scheduler.start()
+
+    _DEFAULT_KEY = "HELPDESK_SECRET_KEY_CHANGE_IN_PRODUCTION"
+    if os.environ.get("SECRET_KEY", _DEFAULT_KEY) == _DEFAULT_KEY:
+        print("=" * 60)
+        print("[WARNING] SECRET_KEY is not set — using insecure default.")
+        print("  Generate a key:  python3 -c \"import secrets; print(secrets.token_hex(32))\"")
+        print("  Then set it:     export SECRET_KEY=<generated-key>")
+        print("  See docs/ADMIN_GUIDE.md Part 8 for full instructions.")
+        print("=" * 60)
 
     print("[OK] MOM Helpdesk v4.0 ready")
     print("   Admin:      http://0.0.0.0:8000/admin")

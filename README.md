@@ -86,9 +86,9 @@ helpdeskv05/
 
 - [ ] Set server IP in all three config locations (Step 1 above)
 - [ ] Change default admin password (`admin` / `admin123`)
+- [ ] **Set a strong `SECRET_KEY`** — copy `.env.example` to `.env` and fill it in (see `docs/ADMIN_GUIDE.md` Part 8 for step-by-step instructions)
 - [ ] Open TCP port 8000 in server firewall for your workstation subnet
 - [ ] Build Windows client: `python -m PyInstaller helpdesk.spec` from `client_app/` → `dist/HelpdeskClient.exe`
 - [ ] Build macOS client: `python3 -m PyInstaller helpdesk_mac.spec` from `client_app/` → `dist/HelpdeskClient.app`
-- [ ] Set a strong `SECRET_KEY` env var before going live (see `docs/ADMIN_GUIDE.md` Part 8)
 - [ ] (Optional) Set `GITHUB_REPO` in `backend/routers/update.py` for auto-update
 - [ ] To stop the server: run `stop_server.bat` (Windows) or `./stop_server.sh` (macOS)
