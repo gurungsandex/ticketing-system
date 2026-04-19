@@ -65,18 +65,18 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--txt)}
   box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:500;overflow:hidden}
 .notif-panel-hdr{display:flex;align-items:center;justify-content:space-between;
   padding:10px 14px;border-bottom:1px solid var(--border);background:var(--page)}
-.notif-panel-hdr span{font-size:13px;font-weight:700}
+.notif-panel-hdr span{font-size:13px;font-weight:700;color:var(--txt)}
 .notif-mark-all{font-size:11px;color:var(--blue);background:none;border:none;padding:2px 6px;border-radius:4px}
 .notif-mark-all:hover{background:var(--blue-lt)}
-.notif-list{max-height:300px;overflow-y:auto}
+.notif-list{max-height:320px;overflow-y:auto}
 .notif-empty{text-align:center;padding:24px;color:var(--muted);font-size:12px}
-.notif-item{padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s;display:flex;gap:9px}
+.notif-item{padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s;display:flex;gap:9px;align-items:flex-start}
 .notif-item:hover{background:var(--blue-lt)}
 .notif-item.unread{background:#F0F9FF}
 .notif-dot{width:8px;height:8px;border-radius:50%;background:transparent;flex-shrink:0;margin-top:4px;border:2px solid var(--border)}
 .notif-item.unread .notif-dot{background:var(--blue)}
 .notif-content{flex:1;min-width:0}
-.notif-msg{font-size:12px;line-height:1.4;margin-bottom:2px}
+.notif-msg{font-size:12px;color:var(--txt);line-height:1.4;margin-bottom:2px}
 .notif-time{font-size:10px;color:var(--muted)}
 .ws-dot{width:7px;height:7px;border-radius:50%;background:#9CA3AF;display:inline-block;margin-right:4px}
 .ws-dot.on{background:var(--green)}
@@ -197,7 +197,6 @@ textarea.note-inp:focus{border-color:var(--blue)}
           <div class="notif-list" id="notifList"><div class="notif-empty">Loading…</div></div>
         </div>
       </div>
-      <span id="tbUser" style="font-size:12px;color:rgba(255,255,255,.85)"></span>
       <span class="role-pill">TECHNICIAN</span>
       <button class="logout-btn" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:6px;padding:4px 11px;font-size:12px" onclick="openAccount()" title="My Account">👤 Account</button>
       <button class="logout-btn" onclick="doLogout()">Logout</button>
@@ -432,7 +431,6 @@ function doLogout(){
 }
 
 function initDashboard(){
-  $("tbUser").textContent=S.user;
   hide("loginScreen");show("dash");
   loadTickets();
   timer=setInterval(loadTickets,30000);

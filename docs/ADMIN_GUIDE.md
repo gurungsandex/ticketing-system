@@ -138,7 +138,9 @@ Click **Delete** next to any user in the table.
 
 ### Reset a Forgotten Password
 
-There is no self-service reset. To reset a technician's password:
+Technicians and admins can change their own password at any time via **👤 Account** in the top navigation bar — no admin involvement needed.
+
+If a technician is **locked out** and cannot log in at all, an admin must reset it manually:
 1. Delete their account
 2. Re-create it with the same username and a new password
 

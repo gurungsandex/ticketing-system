@@ -261,7 +261,6 @@ textarea.note-inp:focus{border-color:var(--blue)}
         </div>
       </div>
 
-      <span id="tbUser" style="font-size:12px"></span>
       <span id="tbRole" class="role-pill"></span>
       <button class="nav-btn" onclick="openAccount()" title="My Account">👤 Account</button>
       <button class="logout-btn" onclick="doLogout()">Logout</button>
@@ -644,7 +643,6 @@ function doLogout(){
 }
 
 function initDashboard(){
-  $("tbUser").textContent=S.user;
   $("tbRole").textContent=S.role==="super_admin"?"ADMIN":"TECHNICIAN";
 
   if(S.role==="super_admin"){
