@@ -68,7 +68,7 @@ async def lifespan(application: FastAPI):
                 role="super_admin",
             ))
             db.commit()
-            print("⚠  Default admin created: admin / admin123 — CHANGE THIS PASSWORD NOW!")
+            print("[!] Default admin created: admin / admin123 -- CHANGE THIS PASSWORD NOW!")
     finally:
         db.close()
 
@@ -77,7 +77,7 @@ async def lifespan(application: FastAPI):
     scheduler.add_job(_cleanup_old_records, "cron", hour=2, minute=0)
     scheduler.start()
 
-    print("✓  MOM Helpdesk v4.0 ready")
+    print("[OK] MOM Helpdesk v4.0 ready")
     print("   Admin:      http://0.0.0.0:8000/admin")
     print("   Technician: http://0.0.0.0:8000/tech")
 
