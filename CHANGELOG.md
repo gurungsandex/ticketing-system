@@ -8,7 +8,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 
 ## [Unreleased]
 
-_Changes on `master` not yet tagged as a release._
+### Fixed
+- Version mismatch: `CURRENT_VERSION` in `backend/routers/update.py` now correctly reports `1.0.0`
+- Removed unused variable assignment (`n = _create_notification(...)`) in `tickets.py` that would fail CI lint
+- Startup message now respects `HOST` and `PORT` environment variables from `.env`
+- Updated auto-update router example comment to use a generic placeholder instead of old project-specific reference
+
+### Added
+- `pyproject.toml` with ruff linter configuration (100-char line length matching `.editorconfig`)
+- CI workflow now passes `--config pyproject.toml` to ruff for consistent lint behaviour
+- Bumped `actions/checkout` v4 → v6 and `actions/setup-python` v5 → v6 in CI workflow
 
 ---
 

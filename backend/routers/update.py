@@ -23,9 +23,9 @@ router = APIRouter()
 
 # ── Set your GitHub repo here ─────────────────────────
 GITHUB_REPO = "YOUR_ORG/YOUR_REPO"
-# Example: GITHUB_REPO = "sandeshgrg/mom-helpdesk"
+# Example: GITHUB_REPO = "your-org/ticketing-system"
 
-CURRENT_VERSION = "4.0.0"
+CURRENT_VERSION = "1.0.0"
 # ─────────────────────────────────────────────────────
 
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

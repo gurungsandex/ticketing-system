@@ -1,0 +1,21 @@
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "W",   # pycodestyle warnings
+    "I",   # isort
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",   # line too long — handled per-file where needed
+    "UP007",  # Use X | Y for type hints — Optional[] still clearer for Python 3.10 compat
+    "UP006",  # Use type instead of Type — same reason
+]
+
+[tool.ruff.lint.per-file-ignores]
+"scripts/*" = ["I"]          # seed script — import order not critical
+"client_app/*" = ["I", "E"]  # Qt UI code has intentional compact style

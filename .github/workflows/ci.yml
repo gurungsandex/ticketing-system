@@ -32,7 +32,7 @@ jobs:
           pip install ruff httpx pytest pytest-asyncio
 
       - name: Lint with ruff
-        run: ruff check backend/ scripts/
+        run: ruff check backend/ scripts/ --config pyproject.toml
 
       - name: Check no secrets in source
         run: |

@@ -226,7 +226,7 @@ async def update_status(
 
     msg = f"Ticket {ticket_id} status changed to '{body.status.replace('_', ' ')}' by {current_user.username}"
     for recipient in recipients:
-        n = _create_notification(db, recipient, ticket_id, "status_changed", msg)
+        _create_notification(db, recipient, ticket_id, "status_changed", msg)
     db.commit()
 
     # WebSocket push
