@@ -191,13 +191,13 @@ class MainWindow(QMainWindow):
         import sys as _sys
         if _sys.platform == "darwin":
             from pathlib import Path
-            return (Path.home() / "Library" / "LaunchAgents" / "com.mom.helpdesk.client.plist").exists()
+            return (Path.home() / "Library" / "LaunchAgents" / "com.ticketing.helpdesk.client.plist").exists()
         else:
             try:
                 import winreg
                 k = winreg.OpenKey(winreg.HKEY_CURRENT_USER,
                     r"Software\Microsoft\Windows\CurrentVersion\Run", 0, winreg.KEY_READ)
-                try: winreg.QueryValueEx(k, "MOMHelpdeskClient"); winreg.CloseKey(k); return True
+                try: winreg.QueryValueEx(k, "ITTicketingClient"); winreg.CloseKey(k); return True
                 except FileNotFoundError: winreg.CloseKey(k); return False
             except Exception: return False
 
@@ -209,13 +209,13 @@ class MainWindow(QMainWindow):
                 exe = sys.executable if getattr(sys, "frozen", False) else os.path.abspath(sys.argv[0])
                 plist_dir = Path.home() / "Library" / "LaunchAgents"
                 plist_dir.mkdir(parents=True, exist_ok=True)
-                (plist_dir / "com.mom.helpdesk.client.plist").write_text(
+                (plist_dir / "com.ticketing.helpdesk.client.plist").write_text(
                     f"""<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
   "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>Label</key><string>com.mom.helpdesk.client</string>
+    <key>Label</key><string>com.ticketing.helpdesk.client</string>
     <key>ProgramArguments</key>
     <array><string>{exe}</string></array>
     <key>RunAtLoad</key><true/>
@@ -229,7 +229,7 @@ class MainWindow(QMainWindow):
                 exe = sys.executable if getattr(sys, "frozen", False) else sys.argv[0]
                 k = winreg.OpenKey(winreg.HKEY_CURRENT_USER,
                     r"Software\Microsoft\Windows\CurrentVersion\Run", 0, winreg.KEY_SET_VALUE)
-                winreg.SetValueEx(k, "MOMHelpdeskClient", 0, winreg.REG_SZ, exe)
+                winreg.SetValueEx(k, "ITTicketingClient", 0, winreg.REG_SZ, exe)
                 winreg.CloseKey(k)
             except Exception: pass
         self._update_autostart_menu()
@@ -239,7 +239,7 @@ class MainWindow(QMainWindow):
         if _sys.platform == "darwin":
             try:
                 from pathlib import Path
-                plist = Path.home() / "Library" / "LaunchAgents" / "com.mom.helpdesk.client.plist"
+                plist = Path.home() / "Library" / "LaunchAgents" / "com.ticketing.helpdesk.client.plist"
                 if plist.exists(): plist.unlink()
             except Exception: pass
         else:
@@ -247,7 +247,7 @@ class MainWindow(QMainWindow):
                 import winreg
                 k = winreg.OpenKey(winreg.HKEY_CURRENT_USER,
                     r"Software\Microsoft\Windows\CurrentVersion\Run", 0, winreg.KEY_SET_VALUE)
-                try: winreg.DeleteValue(k, "MOMHelpdeskClient")
+                try: winreg.DeleteValue(k, "ITTicketingClient")
                 except FileNotFoundError: pass
                 winreg.CloseKey(k)
             except Exception: pass
@@ -315,7 +315,7 @@ class MainWindow(QMainWindow):
         icon = QLabel("🎫"); icon.setObjectName("headerIcon")
         tw = QWidget()
         tl = QVBoxLayout(tw); tl.setContentsMargins(8,0,0,0); tl.setSpacing(0)
-        l1 = QLabel("Medical Offices of Manhattan"); l1.setObjectName("headerLine1")
+        l1 = QLabel("IT Ticketing System"); l1.setObjectName("headerLine1")
         l2 = QLabel("Tech Support"); l2.setObjectName("headerLine2")
         tl.addWidget(l1); tl.addWidget(l2)
         lay.addWidget(icon); lay.addWidget(tw); lay.addStretch()
@@ -528,7 +528,7 @@ class MainWindow(QMainWindow):
         top_row.addWidget(cid)
         l.addLayout(top_row)
 
-        dev = QLabel("Developer: Sandesh Gurung")
+        dev = QLabel("IT Ticketing System v1.0")
         dev.setObjectName("devCredit")
         dev.setAlignment(Qt.AlignCenter)
         l.addWidget(dev)

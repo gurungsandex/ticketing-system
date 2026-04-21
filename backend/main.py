@@ -1,16 +1,13 @@
 """
-MOM IT Helpdesk — Backend v4.0
-================================
+IT Ticketing System — Backend v1.0
+====================================
 Run directly (development):
     cd backend
     uvicorn main:app --host 0.0.0.0 --port 8000
 
-Run via setup script (simple):
+Run via setup script (background):
     Windows : setup.bat        (from project root)
     macOS   : ./setup.sh       (from project root)
-
-Run via PM2 (background service):
-    pm2 start ecosystem.config.js
 """
 import os
 import logging
@@ -85,10 +82,10 @@ async def lifespan(application: FastAPI):
         print("[WARNING] SECRET_KEY is not set — using insecure default.")
         print("  Generate a key:  python3 -c \"import secrets; print(secrets.token_hex(32))\"")
         print("  Then set it:     export SECRET_KEY=<generated-key>")
-        print("  See docs/ADMIN_GUIDE.md Part 8 for full instructions.")
+        print("  See docs/ADMIN_GUIDE.md for full instructions.")
         print("=" * 60)
 
-    print("[OK] MOM Helpdesk v4.0 ready")
+    print("[OK] IT Ticketing System v1.0 ready")
     print("   Admin:      http://0.0.0.0:8000/admin")
     print("   Technician: http://0.0.0.0:8000/tech")
 
@@ -100,8 +97,8 @@ async def lifespan(application: FastAPI):
 
 # ── App ───────────────────────────────────────────────
 app = FastAPI(
-    title="MOM IT Helpdesk",
-    version="4.0.0",
+    title="IT Ticketing System",
+    version="1.0.0",
     docs_url="/api/docs",
     redoc_url=None,
     lifespan=lifespan,
@@ -141,7 +138,7 @@ def serve_tech():
 # ── Health ────────────────────────────────────────────
 @app.get("/health")
 def health():
-    return {"status": "ok", "version": "4.0.0"}
+    return {"status": "ok", "version": "1.0.0"}
 
 # ── Auth ──────────────────────────────────────────────
 @app.post("/auth/login", response_model=schemas.LoginResponse)

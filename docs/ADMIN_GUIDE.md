@@ -1,12 +1,11 @@
-# Admin Guide — MOM IT Helpdesk v4.0
+# Admin Guide — IT Ticketing System
 
 ---
 
 ## System Requirements
 
-**Server (Windows or macOS):**
-- Python 3.10–3.12 recommended *(see Python version note below)*
-- Node.js 18 or later — only required for PM2
+**Server (Windows or macOS/Linux):**
+- Python 3.10–3.12 recommended (Python 3.12 LTS preferred)
 - 1 GB RAM minimum
 - Static LAN IP address (e.g. `192.168.1.50`)
 - TCP port 8000 open on the server firewall
@@ -27,6 +26,8 @@
 
 **macOS:** Open Terminal → run `ipconfig getifaddr en0`. If blank, try `en1`.
 
+**Linux:** Run `hostname -I | awk '{print $1}'`.
+
 ### Step 2 — Set the Server IP in Three Places
 
 **`admin_panel/index.html`** — open in any text editor, find this line near the bottom inside the `<script>` block:
@@ -42,456 +43,272 @@ Replace `YOUR_SERVER_IP` with your actual IP (e.g. `192.168.1.50`).
 SERVER_URL = "http://192.168.1.50:8000"
 ```
 
-### Step 3 — Install Python Dependencies
+### Step 3 — Configure Environment Variables
 
-Open **Command Prompt** (Windows) or **Terminal** (macOS). Navigate to the `backend` folder:
-
-```cmd
-cd C:\path\to\helpdeskv05\backend
-```
-
-Install dependencies:
-
-**Windows:**
-```cmd
-python -m pip install -r requirements.txt
-```
-
-**macOS:**
+Copy the example file:
 ```bash
-python3 -m pip install -r requirements.txt
+cp .env.example .env
 ```
 
-> **Always use `python -m pip`** — never bare `pip`. On Windows, the `pip` shortcut frequently breaks after Python upgrades. `python -m pip` always works.
-
-### Step 4 — Start the Server
-
-Choose one method:
-
-**Method A — setup script (simplest, runs in background):**
-
-Windows — double-click `setup.bat` from the project root folder.  
-The server launches in the background automatically. You can close the terminal window once it prints the access URLs.
-
-macOS:
-```bash
-chmod +x setup.sh    # one time only
-./setup.sh
-```
-
-The script auto-detects your IP, installs dependencies, starts the server in the background, and auto-writes `stop_server.sh`. Close the terminal after it finishes.
-
-**To stop the server:**
-- Windows: run `stop_server.bat`
-- macOS: run `./stop_server.sh`
-
-**Method B — PM2 (background service, survives reboots, recommended for production):**
-
-See `docs/PM2_GUIDE.md`.
-
-### Step 5 — Verify
-
-Open a browser and go to:
-```
-http://192.168.1.50:8000/health
-```
-Expected response: `{"status":"ok","version":"4.0.0"}`
-
-Then open the dashboards:
-- Admin: `http://192.168.1.50:8000/admin`
-- Tech:  `http://192.168.1.50:8000/tech`
-
-### Step 6 — First Login and Password Change
-
-Default credentials: **`admin` / `admin123`**
-
-Change the password immediately:
-1. Log in to the admin panel
-2. Click **👤 Account** in the top navigation bar (top-right, between your role badge and Logout)
-3. Enter current password (`admin123`), new password (min 8 characters), and confirm
-4. Click **Change Password**
-
----
-
-## Part 2 — User Management
-
-Go to **Users** in the top navigation bar (visible to admins only).
-
-### Create a Technician Account
-
-1. Enter a username and password (minimum 8 characters)
-2. Set Role to **Technician**
-3. Click **Create**
-
-Technician login URL: `http://SERVER_IP:8000/tech`
-
-### Create an Additional Admin
-
-Same steps — set Role to **Admin**.
-
-### Delete a User
-
-Click **Delete** next to any user in the table.
-- You cannot delete your own account
-- You cannot delete the last remaining admin
-- Deleting a user does **not** delete their ticket history — only their login is removed
-
-### Reset a Forgotten Password
-
-Technicians and admins can change their own password at any time via **👤 Account** in the top navigation bar — no admin involvement needed.
-
-If a technician is **locked out** and cannot log in at all, an admin must reset it manually:
-1. Delete their account
-2. Re-create it with the same username and a new password
-
----
-
-## Part 3 — Managing Tickets
-
-### Ticket Statuses
-
-| Status | Meaning |
-|---|---|
-| Active | Submitted but not yet picked up |
-| In Progress | Technician is actively working on it |
-| Resolved | Issue closed |
-
-### Assigning a Ticket
-
-1. Click any ticket row to open it
-2. Right panel → **Assign Technician** → select from dropdown → **Assign**
-3. The assigned technician receives an instant notification (real-time push or 30-second polling fallback)
-
-Only admins can assign or reassign tickets.
-
-### Updating Status
-
-Admins can change status on any ticket. Technicians can only update status on tickets assigned to them. This is enforced server-side — not just in the UI.
-
-### Internal Notes
-
-Notes are visible only to IT staff (admins and technicians). End-users never see them. Use notes to log troubleshooting steps, escalation details, or resolution summaries.
-
-### Downloading Attachments
-
-Click **⬇ Download** next to any attachment. The file saves to your Downloads folder automatically.
-
-If clicking does nothing or you see an authentication error:
-1. Hard refresh the browser: `Ctrl+Shift+R` (Windows) / `Cmd+Shift+R` (macOS)
-2. Try again — old cached JavaScript may have been the cause
-
----
-
-## Part 4 — Restarting the Server
-
-**You do not need to restart for HTML file changes.** Just hard-refresh the browser.
-
-**You must restart when any Python file changes:**
-
-| What changed | Restart needed? |
-|---|---|
-| `admin_panel/index.html` | ❌ — hard refresh browser only |
-| `tech_panel/index.html` | ❌ — hard refresh browser only |
-| Any file in `backend/` | ✅ |
-| `requirements.txt` (after installing new packages) | ✅ |
-| `ecosystem.config.js` | ✅ (via `pm2 restart helpdesk`) |
-
-**How to restart:**
-
-Via setup script — run `stop_server.bat` (Windows) or `./stop_server.sh` (macOS), then re-run the setup script.
-
-Via PM2:
-```bash
-pm2 restart helpdesk
-```
-
----
-
-## Part 5 — Building and Distributing the Client Desktop App
-
-The client desktop app is the tray/menu-bar application used by end-users to submit tickets. It must be compiled from source before distribution.
-
-### When to Rebuild
-
-| Changed file | Rebuild needed? |
-|---|---|
-| `client_app/config.py` (server IP changed) | **Yes** |
-| `client_app/ui/main_window.py` | **Yes** |
-| `client_app/api_client.py` | **Yes** |
-| `client_app/main.py` | **Yes** |
-| `admin_panel/index.html` | No |
-| `tech_panel/index.html` | No |
-| Any `backend/` file | No |
-
-### Build — Windows (.exe)
-
-Requires a Windows machine with Python 3.10–3.12.
-
-Open Command Prompt:
-```cmd
-cd client_app
-python -m pip install -r requirements.txt
-python -m PyInstaller helpdesk.spec
-```
-
-Output: `client_app\dist\HelpdeskClient.exe`
-
-Build time: approximately 2–3 minutes.
-
-### Build — macOS (.app)
-
-Requires a Mac with Python 3.10+.
-
-Open Terminal:
-```bash
-cd client_app
-python3 -m pip install -r requirements.txt
-python3 -m PyInstaller helpdesk_mac.spec
-```
-
-Output: `client_app/dist/HelpdeskClient.app`
-
-Build time: approximately 2–3 minutes.
-
-### Distribution
-
-**Windows:** Copy `HelpdeskClient.exe` to each workstation — no Python or other software required.
-
-**macOS:** Copy `HelpdeskClient.app` to each Mac's `/Applications` folder.
-
-On first launch the app:
-- Appears in the system tray (Windows: bottom-right near the clock) or menu bar (macOS: top-right)
-- Auto-registers to start on login (Windows: registry; macOS: LaunchAgent)
-- Works offline — queues tickets locally if the server is unreachable and retries every 60 seconds
-
----
-
-## Part 6 — Database Management
-
-The database is a single file: `backend/helpdesk.db`
-
-### Manual Backup
-
-**Windows:**
-```cmd
-copy backend\helpdesk.db backup_helpdesk_%date:~-4,4%%date:~-7,2%%date:~0,2%.db
-```
-
-**macOS:**
-```bash
-cp backend/helpdesk.db backup_helpdesk_$(date +%Y%m%d).db
-```
-
-### Automatic Cleanup
-
-Tickets, notes, attachments, and notifications older than 30 days are deleted automatically at 2 AM daily. To extend or disable this, edit `backend/main.py`:
-
-```python
-# Change 30 to any number of days, or comment out the scheduler job entirely
-cutoff = datetime.utcnow() - timedelta(days=30)
-```
-
-Restart the server after editing.
-
----
-
-## Part 7 — Firewall Configuration
-
-Port 8000 must be reachable from workstations on the LAN.
-
-**Windows (run Command Prompt as Administrator):**
-```cmd
-netsh advfirewall firewall add rule name="MOM Helpdesk" dir=in action=allow protocol=TCP localport=8000
-```
-
-**macOS:** macOS does not block local network inbound connections by default. If you have a strict firewall profile, allow TCP 8000 via System Settings → Network → Firewall → Options.
-
----
-
-## Part 8 — Optional Configuration
-
-### Change the Server Port
-
-Default port is `8000`. To change it:
-
-**`setup.bat` (Windows)** — edit the `mom_server_daemon.pyw` file that setup.bat writes, or change the port inside the `setup.bat` itself in the section that writes the daemon:
-```bat
-echo             "--host", "0.0.0.0", "--port", "8080"],
-```
-
-**`setup.sh` (macOS)** — edit the uvicorn launch line near the bottom:
-```bash
-nohup $PYTHON -m uvicorn main:app --host 0.0.0.0 --port 8080 ...
-```
-
-**PM2** — edit `ecosystem.config.js`:
-```javascript
-env: {
-  HOST: "0.0.0.0",
-  PORT: "8080",
-},
-```
-
-After changing the port, also update:
-- `const API` in `admin_panel/index.html`
-- `const API` in `tech_panel/index.html`
-- `SERVER_URL` in `client_app/config.py` (then rebuild)
-
-### Set a Strong JWT Secret Key
-
-Every login token is cryptographically signed with `SECRET_KEY`. If this key is left as the default, anyone who has read the source code can forge admin tokens and gain full access to the system. **This must be set before going live.**
-
-#### Step 1 — Generate a secure random key
-
-**Windows:**
-```cmd
-python -c "import secrets; print(secrets.token_hex(32))"
-```
-
-**macOS / Linux:**
+Generate a strong `SECRET_KEY`:
 ```bash
 python3 -c "import secrets; print(secrets.token_hex(32))"
 ```
 
-Copy the 64-character string that is printed. Example output:
+Edit `.env` and paste the result:
 ```
-49c03dd0ca41871d54298d73009b94823921fdb4b8a68403aab2cfc27be5c0b1
-```
-
-#### Step 2 — Set the key in your environment
-
-Choose **one** method that matches how you run the server:
-
----
-
-**Option A — Environment variable (simplest, any OS)**
-
-Windows (Command Prompt, before starting the server):
-```cmd
-set SECRET_KEY=your-generated-key-here
-setup.bat
+SECRET_KEY=<your-generated-key>
 ```
 
-macOS / Linux (Terminal, before starting the server):
+### Step 4 — Start the Server
+
+**Windows:**
+```
+Double-click setup.bat
+```
+
+**macOS/Linux:**
 ```bash
-export SECRET_KEY="your-generated-key-here"
+chmod +x setup.sh
 ./setup.sh
 ```
 
----
-
-**Option B — `.env` file (recommended for manual deployments)**
-
-Create a file named `.env` in the project root (next to `setup.bat` / `setup.sh`):
-
-```
-SECRET_KEY=your-generated-key-here
-```
-
-The server loads this file automatically on startup via `python-dotenv`. Never commit this file to git — it is already excluded in `.gitignore`.
+The script installs dependencies, detects your LAN IP, starts the server in the background, and prints access URLs.
 
 ---
 
-**Option C — PM2 `ecosystem.config.js` (recommended for production services)**
+## Part 2 — First Login & Password Change
 
-Open `ecosystem.config.js` and add `SECRET_KEY` under `env`:
+1. Open `http://YOUR_SERVER_IP:8000/admin` in your browser
+2. Log in with: `admin` / `admin123`
+3. Immediately go to **Change Password** (top-right menu or user icon)
+4. Set a strong password (minimum 8 characters)
 
-```javascript
-env: {
-  HOST: "0.0.0.0",
-  PORT: "8000",
-  SECRET_KEY: "your-generated-key-here",
-},
+**Never leave the default password active in production.**
+
+---
+
+## Part 3 — Managing Users
+
+Navigate to **Users** tab (super_admin only).
+
+### Create a New User
+
+1. Click **Add User**
+2. Enter a username and password (min 8 characters)
+3. Select role: `technician` or `super_admin`
+4. Click **Save**
+
+### Delete a User
+
+Click the trash icon next to any user. You cannot delete yourself or the last remaining super_admin.
+
+### Roles
+
+| Role | Permissions |
+|---|---|
+| `super_admin` | Full access: create/delete users, assign tickets, view all tickets, access Updates tab |
+| `technician` | View assigned tickets, add notes, change ticket status. Cannot manage users. |
+
+### Change a User's Password
+
+Any user can change their own password via the password-change form. Super admins can delete and recreate accounts if a password reset is needed.
+
+---
+
+## Part 4 — Managing Tickets
+
+Navigate to the **Tickets** tab.
+
+### Viewing Tickets
+
+The ticket list shows all tickets. Use the status filter and search bar to narrow results.
+
+### Assigning a Ticket
+
+1. Click on a ticket to open its detail view
+2. In the **Assign To** dropdown, select a technician
+3. Click **Assign**
+
+The assigned technician will receive a notification.
+
+### Updating Ticket Status
+
+Click on a ticket → use the **Status** dropdown to update (e.g. In Progress, Resolved, Closed).
+
+### Adding Notes
+
+Click on a ticket → scroll to the Notes section → type a note and click **Add Note**.
+
+Notes are internal — not visible to end-users.
+
+### Attachments
+
+End-users can upload files (PDF, images, max 10 MB) when submitting tickets. Download them from the ticket detail view.
+
+---
+
+## Part 5 — Notifications
+
+The bell icon in the top-right shows real-time notifications for:
+- Ticket assigned to you
+- New comment/note added to your ticket
+- Ticket status changed
+
+Click the bell to open the notification panel. Click a notification to jump to the related ticket.
+
+---
+
+## Part 6 — Stopping and Restarting the Server
+
+**Windows:**
+```
+stop_server.bat    ← generated by setup.bat
+setup.bat          ← restarts
 ```
 
-Then restart the service:
+**macOS/Linux:**
 ```bash
-pm2 restart helpdesk
+./stop_server.sh   # generated by setup.sh
+./setup.sh         # restart
 ```
 
 ---
 
-#### Step 3 — Verify the key is active
+## Part 7 — Logs
 
-Start the server and check that the warning is **not** shown in the output:
+Server logs are written to `logs/server.log`.
 
-```
-[WARNING] SECRET_KEY is not set — using insecure default.
-```
-
-If that warning appears, the key was not picked up. Re-check the method you chose in Step 2 and restart the server.
-
-> **Important:** If you change `SECRET_KEY` after users are already logged in, all existing sessions will be invalidated and users will need to log in again. This is expected behaviour.
-
-### Restrict CORS to Your Server IP
-
-By default CORS allows all origins (`*`). To lock it to your server only:
-
-**Via PM2** — add to `ecosystem.config.js` under `env`:
-```javascript
-env: {
-  HOST: "0.0.0.0",
-  PORT: "8000",
-  CORS_ORIGINS: "http://192.168.1.50:8000",
-},
-```
-Then: `pm2 restart helpdesk`
-
-**Via setup script** — set the variable before running:
-
-Windows:
+**Windows — view logs:**
 ```cmd
-set CORS_ORIGINS=http://192.168.1.50:8000
-setup.bat
+type logs\server.log
 ```
-macOS:
+
+**macOS/Linux:**
 ```bash
-export CORS_ORIGINS="http://192.168.1.50:8000"
-./setup.sh
+tail -f logs/server.log
 ```
 
-### Configure GitHub Auto-Update
+---
 
-This allows the admin panel to pull updates directly from a private GitHub repository.
+## Part 8 — Security Configuration
 
-1. Push the project to a private GitHub repository
-2. Open `backend/routers/update.py` and set:
+### SECRET_KEY (Required)
+
+Generate a key:
+```bash
+python3 -c "import secrets; print(secrets.token_hex(32))"
+```
+
+Set in `.env`:
+```
+SECRET_KEY=<your-generated-key>
+```
+
+If `SECRET_KEY` is not set, the server will start with an insecure default and print a warning. JWT tokens signed with the default key are **not secure** and should never be used in production.
+
+### Restrict CORS (Recommended for Production)
+
+By default, the API accepts requests from any origin (`*`). To restrict:
+```
+CORS_ORIGINS=http://192.168.1.50:8000
+```
+
+Multiple origins (comma-separated):
+```
+CORS_ORIGINS=http://192.168.1.50:8000,https://helpdesk.yourdomain.com
+```
+
+### HTTPS (Recommended for Production)
+
+Use Nginx or Caddy as a reverse proxy to terminate TLS. See the README for a sample Nginx configuration.
+
+---
+
+## Part 9 — Firewall Configuration
+
+### Windows Server
+
+```cmd
+netsh advfirewall firewall add rule name="IT Ticketing" dir=in action=allow protocol=TCP localport=8000
+```
+
+### Linux (ufw)
+
+```bash
+sudo ufw allow 8000/tcp
+```
+
+### macOS
+
+System Preferences → Security & Privacy → Firewall → Allow port 8000 for Python.
+
+---
+
+## Part 10 — Database Backup
+
+The entire database is a single SQLite file:
+```
+backend/helpdesk.db
+```
+
+**Manual backup:**
+```bash
+cp backend/helpdesk.db backups/helpdesk_$(date +%Y%m%d).db
+```
+
+**Scheduled backup (Linux cron — daily at 1 AM):**
+```cron
+0 1 * * * cp /path/to/ticketing-system/backend/helpdesk.db /path/to/backups/helpdesk_$(date +\%Y\%m\%d).db
+```
+
+**Auto-cleanup:** Tickets (and their notes, attachments, notifications) older than 30 days are automatically deleted at 2:00 AM daily.
+
+---
+
+## Part 11 — Auto-Update (Optional)
+
+The system includes a built-in update mechanism using GitHub Releases.
+
+1. Set your repository URL in `backend/routers/update.py`:
    ```python
-   GITHUB_REPO = "yourorg/mom-helpdesk"
+   GITHUB_REPO = "YOUR_ORG/ticketing-system"
    ```
-3. On the server, clone the repo and run the backend from inside that cloned folder
-4. Admin panel → **Updates** → **Check for Updates** → **Apply Update**
+2. Log in as `super_admin`
+3. Navigate to the **Updates** tab
+4. Click **Check for Updates** to compare against the latest GitHub release
+5. Click **Apply Update** to run `git pull --rebase` and restart the server
 
-The server pulls the latest code and restarts automatically. End-users never interact with GitHub.
-
-### Change Data Retention Period
-
-Edit `backend/main.py`, find `_cleanup_old_records()`:
-```python
-cutoff = datetime.utcnow() - timedelta(days=30)  # change 30 to desired days
-```
-Restart the server after saving.
+> The server machine must have `git` installed and the project must be a git clone (not a zip download) for auto-update to work.
 
 ---
 
-## Troubleshooting
+## Part 12 — Building the Desktop Client App
 
-| Symptom | Cause | Fix |
-|---|---|---|
-| `Fatal error in launcher` when running pip | Python 3.14 broken pip shortcut on Windows | Use `python -m pip install -r requirements.txt` instead |
-| `pip` not recognised | Python not added to PATH | Reinstall Python 3.12 — check **"Add Python to PATH"** during setup, then reopen Command Prompt |
-| `{"detail":"Authentication required"}` on download | Old HTML cached in browser | Hard refresh: `Ctrl+Shift+R` (Windows) / `Cmd+Shift+R` (macOS), then try downloading again |
-| Download button does nothing | Old HTML file still in place | Confirm latest `index.html` is in `admin_panel/` and `tech_panel/`, then hard refresh |
-| Can't reach server from other machines | Firewall blocking port 8000 | Run the firewall command in Part 7 |
-| "Admin panel not found" in browser | setup.bat/setup.sh run from wrong folder | Run from the project root (`helpdeskv05/`), not from inside `backend/` |
-| Login fails with correct password | Database not initialised or file corrupted | Delete `backend/helpdesk.db` and restart — a fresh DB is auto-created |
-| Tickets don't appear after login | Wrong IP in `const API` | Confirm `const API = "http://192.168.1.50:8000"` — do not use `localhost` from another machine |
-| Notification bell shows grey dot | Browser blocked WebSocket | No action needed — notifications fall back to 30-second polling automatically |
-| PM2 shows `errored` | Python not found | Run `where python` (Windows) / `which python3` (macOS) — see `PM2_GUIDE.md` for full fix |
-| Python changes not taking effect | Server not restarted | Restart after any `.py` file change — see Part 4 |
-| HTML changes not visible | Browser cache | Hard refresh only — no server restart needed for HTML files |
-| Client app won't connect to server | Wrong `SERVER_URL` in `config.py` | Update `SERVER_URL`, rebuild, redistribute |
-| End-user sees no tray icon (Windows) | App not running | Ask the user to open `HelpdeskClient.exe` — it registers auto-start on first launch |
-| End-user sees no menu-bar icon (macOS) | App not running | Ask the user to open `HelpdeskClient.app` from Applications |
-| Server stops when terminal is closed (macOS) | Using old setup.sh | Re-run `./setup.sh` — updated version runs in background automatically |
-| `stop_server.bat` / `stop_server.sh` not found | setup script not run yet | Run `setup.bat` or `./setup.sh` first — the stop script is generated automatically |
+The client app is a PySide6 system tray application for end-users to submit tickets.
+
+**Before building**, configure `client_app/config.py`:
+```python
+SERVER_URL = "http://192.168.1.50:8000"   # ← Your server IP
+APP_NAME   = "Your Company — Tech Support" # ← Displayed in the tray app
+```
+
+**Install build dependencies:**
+```bash
+cd client_app
+pip install -r requirements.txt
+```
+
+**Build Windows executable:**
+```bash
+python -m PyInstaller helpdesk.spec
+# Output: client_app/dist/HelpdeskClient.exe
+```
+
+**Build macOS application:**
+```bash
+python3 -m PyInstaller helpdesk_mac.spec
+# Output: client_app/dist/HelpdeskClient.app
+```
+
+Distribute the built binary to end-user workstations. No Python installation is required on end-user machines.

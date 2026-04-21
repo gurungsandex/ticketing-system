@@ -1,5 +1,5 @@
 """
-MOM IT Helpdesk — Windows background server daemon.
+IT Ticketing System — Windows background server daemon.
 Launched by setup.bat via pythonw.exe (no console window).
 Restarts uvicorn automatically if it crashes.
 """

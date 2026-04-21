@@ -38,7 +38,7 @@ def _register_autostart_win():
             r"Software\Microsoft\Windows\CurrentVersion\Run",
             0, winreg.KEY_SET_VALUE,
         )
-        winreg.SetValueEx(k, "MOMHelpdeskClient", 0, winreg.REG_SZ, exe)
+        winreg.SetValueEx(k, "ITTicketingClient", 0, winreg.REG_SZ, exe)
         winreg.CloseKey(k)
     except Exception:
         pass
@@ -50,14 +50,14 @@ def _register_autostart_mac():
         exe = sys.executable if getattr(sys, "frozen", False) else os.path.abspath(sys.argv[0])
         plist_dir = Path.home() / "Library" / "LaunchAgents"
         plist_dir.mkdir(parents=True, exist_ok=True)
-        plist = plist_dir / "com.mom.helpdesk.client.plist"
+        plist = plist_dir / "com.ticketing.helpdesk.client.plist"
         plist.write_text(
             f"""<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
   "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>Label</key><string>com.mom.helpdesk.client</string>
+    <key>Label</key><string>com.ticketing.helpdesk.client</string>
     <key>ProgramArguments</key>
     <array><string>{exe}</string></array>
     <key>RunAtLoad</key><true/>

@@ -1,68 +1,82 @@
 # IT Help Request Guide
 
-**For Medical Offices of Manhattan Staff**
+**For End-Users**
 
 ---
 
-## How to Report an IT Problem
+## How to Submit a Support Request
 
-**Step 1 — Open the app**
-
-Look for the **MOM Helpdesk** icon in your system tray — the row of small icons at the bottom-right of your screen, near the clock.
-
-Double-click the icon to open the app. If you do not see it, your IT team will provide the file to install.
+When you have an IT issue, use the **IT Ticketing System** desktop app to request help from your IT team.
 
 ---
 
-**Step 2 — Describe your problem**
+## Step 1 — Find the App
 
-- Select the **category** that best describes your issue (e.g. Printer, Email, Network / Internet)
-- Optionally select a more specific **sub-category**
-- Optionally type a brief **description** of what is happening
+Look for the **IT Support** icon in your system tray — the row of small icons at the bottom-right of your screen (Windows), near the clock, or in the menu bar (macOS).
 
----
-
-**Step 3 — Attach a screenshot (optional)**
-
-If there is an error message on your screen, a screenshot helps IT resolve the issue faster.
-
-To take a screenshot:
-1. Press `Windows + Shift + S`
-2. Drag to select the area with the error message
-3. The image saves to your Pictures folder automatically
-4. In the helpdesk app, click **Attach File** and select the saved image
+If you don't see it, ask your IT administrator to install the client app on your computer.
 
 ---
 
-**Step 4 — Submit**
+## Step 2 — Open the App
 
-Click **Submit Request**.
-
-You will see a green confirmation screen with your **Ticket ID** (e.g. `TKT-20260415-0003`). Note this down — IT may ask for it when following up.
+**Single-click** (Windows) or **click** (macOS) the tray icon to open the support form.
 
 ---
 
-## What Happens Next
+## Step 3 — Fill Out the Form
 
-- Your ticket goes to the IT team immediately
-- IT will assign a technician and begin working on your issue
-- You will see a notification on your screen when your ticket status changes
-- The app checks for updates every 30 seconds in the background — you do not need to do anything
+You will see a form with these fields:
+
+| Field | Notes |
+|---|---|
+| **Your Name** | Optional, but helps IT identify you faster |
+| **Category** | Select the type of issue (e.g. Computer, Network, Printer) |
+| **Sub-category** | Narrow down the specific problem |
+| **Description** | Describe your issue in as much detail as possible |
+| **Attachment** | Optional — attach a screenshot or document |
+
+**Tips for a good description:**
+- What were you trying to do?
+- What happened instead?
+- When did it start?
+- Does it happen every time, or occasionally?
+
+---
+
+## Step 4 — Submit
+
+Click **Submit Request**. You will see a confirmation message with your **Ticket ID** (format: `TKT-YYYYMMDD-NNNN`). Keep this ID for your records.
+
+---
+
+## Tracking Your Request
+
+Your IT team will work on your ticket and update its status. The app will show a notification when:
+
+- Your ticket is being worked on (**In Progress**)
+- Your issue has been resolved (**Resolved**)
+
+If you see a notification, click the tray icon to view the update.
 
 ---
 
 ## Tips
 
-- **Be specific in your description** — "Outlook is not opening, it shows error 0x80070002" is more useful than "email is broken"
-- **Include a screenshot** when there is a visible error message — it often cuts resolution time in half
-- **Do not submit duplicate tickets** for the same issue — check if you already received a ticket confirmation
+- **Be specific** — the more detail you provide, the faster IT can help
+- **Include a screenshot** — use the attachment button to include a screenshot of any error message
+- **One issue per ticket** — submit separate tickets for separate problems
+- **Urgent issues** — if you have a critical outage, call or walk over to IT in addition to submitting a ticket
 
 ---
 
-## Urgent Issues
+## Frequently Asked Questions
 
-If your problem is preventing patient care or is a clinical emergency, **call IT directly**. The helpdesk app is for standard support requests. For urgent situations, a direct phone call is always faster.
+**Q: I submitted a ticket but haven't heard back — what do I do?**  
+A: Contact your IT team directly and reference your Ticket ID.
 
----
+**Q: I can't open the app — what do I do?**  
+A: Try right-clicking the tray icon. If the icon isn't visible, check if the app is running in the background or ask IT to reinstall it.
 
-*Medical Offices of Manhattan — IT Support*
+**Q: Can I submit a ticket from a browser instead?**  
+A: The client app is the primary way to submit tickets. Contact your IT administrator if you need an alternative method.

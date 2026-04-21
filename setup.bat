@@ -4,7 +4,7 @@ cls
 
 echo.
 echo  ============================================================
-echo    Medical Offices of Manhattan  ^|  IT Helpdesk v4.0
+echo    IT Ticketing System  ^|  v1.0
 echo    Windows Setup Script
 echo  ============================================================
 echo.
@@ -31,17 +31,17 @@ set "ROOT=%~dp0"
 if "%ROOT:~-1%"=="\" set "ROOT=%ROOT:~0,-1%"
 set "BACKEND=%ROOT%\backend"
 set "LOGS=%ROOT%\logs"
-set "DAEMON=%ROOT%\mom_server_daemon.py"
+set "DAEMON=%ROOT%\server_daemon.py"
 
 if not exist "%BACKEND%\main.py" (
     echo  ERROR: backend\main.py not found.
-    echo  Make sure setup.bat is in the helpdeskv05\ root folder.
+    echo  Make sure setup.bat is in the project root folder.
     pause & exit /b 1
 )
 
 if not exist "%DAEMON%" (
-    echo  ERROR: mom_server_daemon.py not found.
-    echo  Make sure setup.bat is in the helpdeskv05\ root folder.
+    echo  ERROR: server_daemon.py not found.
+    echo  Make sure setup.bat is in the project root folder.
     pause & exit /b 1
 )
 
@@ -102,7 +102,7 @@ if not exist "%PYTHONW%" (
 REM ── 7. Write stop_server.bat ─────────────────────────────────
 (
 echo @echo off
-echo echo Stopping MOM IT Helpdesk server...
+echo echo Stopping IT Ticketing System server...
 echo for /f "tokens=5" %%%%p in ^('netstat -ano 2^^^>nul ^| findstr ":8000 " ^| findstr "LISTENING"'^) do taskkill /PID %%%%p /F ^>nul 2^^^>^^^&1
 echo taskkill /im pythonw.exe /F ^>nul 2^^^>^^^&1
 echo echo Done. Server stopped.
@@ -137,7 +137,7 @@ echo    Tech Panel   ^|  http://%LAN_IP%:8000/tech
 echo    Health Check ^|  http://%LAN_IP%:8000/health
 echo.
 echo    Default login:  admin / admin123
-echo    Change password on first login.
+echo    Change password on first login!
 echo.
 echo    Client config:  SERVER_URL = "http://%LAN_IP%:8000"
 echo.

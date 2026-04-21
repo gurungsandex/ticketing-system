@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>MOM IT Helpdesk — Admin</title>
+<title>IT Ticketing System — Admin</title>
 <style>
 :root{
   --blue:#2563EB;--blue-dk:#1D4ED8;--blue-lt:#EFF6FF;
@@ -222,7 +222,7 @@ textarea.note-inp:focus{border-color:var(--blue)}
 <!-- LOGIN -->
 <div id="loginScreen">
   <div class="login-box">
-    <h1>Medical Offices of Manhattan<br>IT Helpdesk</h1>
+    <h1>IT Ticketing System</h1>
     <div class="sub">Admin Console</div>
     <div class="fgrp"><label class="flbl">Username</label>
       <input class="finp" id="lu" type="text" placeholder="admin" autocomplete="username"/></div>
@@ -231,13 +231,13 @@ textarea.note-inp:focus{border-color:var(--blue)}
     <div class="fgrp"><button class="btn btn-blue w100" onclick="doLogin()">Login</button></div>
     <div id="loginErr" class="hidden"></div>
   </div>
-  <div class="dev-credit">Developer: Sandesh Gurung · MOM IT v4.0</div>
+  <div class="dev-credit">IT Ticketing System v1.0</div>
 </div>
 
 <!-- DASHBOARD -->
 <div id="dash" class="hidden">
   <div id="topbar">
-    <div class="tb-left" id="tbAppTitle">Medical Offices of Manhattan — IT Helpdesk</div>
+    <div class="tb-left" id="tbAppTitle">IT Ticketing System</div>
     <div class="tb-center">Last updated: <span id="lastUpd">—</span></div>
     <div class="tb-right">
       <button class="nav-btn active" id="navTkts" onclick="showPage('tickets')">🎫 Tickets</button>
@@ -648,14 +648,14 @@ function initDashboard(){
   if(S.role==="super_admin"){
     show("navUsrs"); show("navUpd");
     show("assignBlock");   // ← admin sees assign section
-    $("tbAppTitle").textContent="Medical Offices of Manhattan — IT Admin";
-    document.title="MOM IT Admin";
+    $("tbAppTitle").textContent="IT Ticketing System — Admin";
+    document.title="IT Ticketing Admin";
     $("topbar").style.background="#DC2626";
   } else {
     hide("navUsrs"); hide("navUpd");
     hide("assignBlock");   // ← technician CANNOT assign tickets
-    $("tbAppTitle").textContent="Medical Offices of Manhattan — IT Helpdesk";
-    document.title="MOM IT Helpdesk";
+    $("tbAppTitle").textContent="IT Ticketing System";
+    document.title="IT Ticketing System";
     $("topbar").style.background="var(--blue)";
   }
 

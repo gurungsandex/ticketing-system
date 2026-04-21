@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================
-#  Medical Offices of Manhattan  |  IT Helpdesk v4.0
+#  IT Ticketing System  |  v1.0
 #  macOS / Linux Setup Script
 #
 #  Usage:
@@ -23,7 +23,7 @@ warn() { echo -e "${YELLOW}  WARN: $*${RESET}"; }
 
 echo ""
 echo "  ============================================================"
-echo "    Medical Offices of Manhattan  |  IT Helpdesk v4.0"
+echo "    IT Ticketing System  |  v1.0"
 echo "    macOS / Linux Setup"
 echo "  ============================================================"
 echo ""
@@ -35,7 +35,7 @@ LOGS="$SCRIPT_DIR/logs"
 
 if [ ! -f "$BACKEND/main.py" ]; then
     err "backend/main.py not found."
-    echo "  Make sure setup.sh is in the helpdeskv05/ root folder."
+    echo "  Make sure setup.sh is in the project root folder."
     exit 1
 fi
 
@@ -122,7 +122,7 @@ cat > "$SCRIPT_DIR/stop_server.sh" << 'STOPEOF'
 #!/usr/bin/env bash
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PID_FILE="$SCRIPT_DIR/logs/server.pid"
-echo "Stopping MOM IT Helpdesk server..."
+echo "Stopping IT Ticketing System server..."
 if [ -f "$PID_FILE" ]; then
     PID=$(cat "$PID_FILE")
     kill "$PID" 2>/dev/null && echo "  Stopped PID $PID." || echo "  Process not running."
@@ -146,7 +146,7 @@ echo "    Tech Panel   |  http://$LAN_IP:8000/tech"
 echo "    Health Check |  http://$LAN_IP:8000/health"
 echo ""
 echo "    Default login:  admin / admin123"
-echo "    Change password on first login."
+echo "    Change password on first login!"
 echo ""
 echo "    Client config:  SERVER_URL = \"http://$LAN_IP:8000\""
 echo ""
