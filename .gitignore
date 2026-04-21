@@ -1,32 +1,65 @@
-# Python
+# ── Python ───────────────────────────────────────────
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
 *.pyd
 *.egg-info/
+*.egg
 dist/
 build/
 .venv/
 venv/
+env/
+ENV/
+pip-wheel-metadata/
 
-# Database (contains live data — do not commit)
+# ── Database (contains live data — never commit) ─────
 backend/helpdesk.db
+backend/*.db-shm
+backend/*.db-wal
 
-# PyInstaller
+# ── Secrets & environment ────────────────────────────
+.env
+.env.local
+.env.production
+*.pem
+*.key
+
+# ── PyInstaller ──────────────────────────────────────
 client_app/dist/
 client_app/build/
 *.spec.bak
 
-# Logs & runtime files
+# ── Logs & runtime generated files ───────────────────
 logs/
 stop_server.sh
 stop_server.bat
+*.pid
 
-# macOS
+# ── OS ───────────────────────────────────────────────
 .DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
 
-# VSCode
+# ── Editors & IDEs ───────────────────────────────────
 .vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
 
-# Environment / secrets
-.env
+# ── Testing & coverage ───────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# ── Misc ─────────────────────────────────────────────
+*.bak
+*.tmp
+.mypy_cache/
+.ruff_cache/

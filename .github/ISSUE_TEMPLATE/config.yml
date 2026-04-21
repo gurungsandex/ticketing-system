@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or Discussion
+    url: https://github.com/gurungsandex/ticketing-system/discussions
+    about: Ask questions and discuss ideas here rather than opening an issue.
+  - name: Security Vulnerability
+    url: https://github.com/gurungsandex/ticketing-system/security/advisories/new
+    about: Please report security vulnerabilities privately via a Security Advisory.

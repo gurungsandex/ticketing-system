@@ -1,0 +1,66 @@
+name: Feature Request
+description: Suggest an improvement or new capability
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement! Please describe your idea clearly.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the use case or pain point this feature addresses.
+      placeholder: As an IT admin, I need... / When deploying in an environment with...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: Describe what you'd like to see added or changed.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any other approaches you considered, and why you prefer your solution.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Related component
+      options:
+        - Backend API
+        - Admin Dashboard (/admin)
+        - Technician Portal (/tech)
+        - Desktop Client App
+        - Setup / Deployment
+        - Documentation
+        - New component
+    validations:
+      required: true
+
+  - type: dropdown
+    id: willing
+    attributes:
+      label: Are you willing to contribute a PR for this?
+      options:
+        - "Yes"
+        - "Maybe, with guidance"
+        - "No"
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and this has not been requested before
+          required: true
+        - label: This feature would be useful to organizations beyond my own
+          required: true
