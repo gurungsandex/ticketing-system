@@ -13,9 +13,9 @@ ENV/
 pip-wheel-metadata/
 
 # ── Database (contains live data — never commit) ─────
-backend/helpdesk.db
-backend/*.db-shm
-backend/*.db-wal
+*.db
+*.db-shm
+*.db-wal
 
 # ── Secrets & environment ────────────────────────────
 .env
