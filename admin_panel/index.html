@@ -6,10 +6,12 @@
 <title>IT Ticketing System — Admin</title>
 <style>
 :root{
-  --blue:#2563EB;--blue-dk:#1D4ED8;--blue-lt:#EFF6FF;
-  --page:#F1F5F9;--card:#FFFFFF;--row2:#F8FAFC;
-  --txt:#1E293B;--muted:#64748B;--border:#E2E8F0;
+  /* --blue kept as primary alias so JS `$("topbar").style.background="var(--blue)"` resolves to teal */
+  --blue:#0D9488;--blue-dk:#0F766E;--blue-lt:#F0FDFA;
+  --page:#F8FAFC;--card:#FFFFFF;--row2:#F9FAFB;
+  --txt:#111827;--muted:#6B7280;--border:#E2E8F0;
   --red:#EF4444;--amber:#F59E0B;--green:#10B981;
+  --sidebar-w:220px;
   --font:system-ui,"Segoe UI",Arial,sans-serif;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -20,26 +22,37 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--txt)}
 .w100{width:100%}.mt1{margin-top:4px}.mt2{margin-top:8px}.mt3{margin-top:12px}
 .sm{font-size:12px}.muted{color:var(--muted)}.bold{font-weight:700}
 
-/* Login */
+/* ── Login ──────────────────────────────────────────── */
 #loginScreen{display:flex;align-items:center;justify-content:center;
-  min-height:100vh;flex-direction:column;gap:16px}
-.login-box{background:var(--card);border:1px solid var(--border);border-radius:12px;
-  padding:40px 36px;width:480px;box-shadow:0 4px 24px rgba(0,0,0,.08)}
-.login-box h1{font-size:19px;font-weight:800;text-align:center;line-height:1.35;color:var(--txt)}
-.login-box .sub{text-align:center;color:var(--muted);font-size:13px;margin-top:5px}
-.fgrp{display:flex;flex-direction:column;gap:5px;margin-top:16px}
-.flbl{font-size:13px;font-weight:600}
+  min-height:100vh;flex-direction:column;gap:16px;background:var(--page)}
+.login-card{background:var(--card);border:1px solid var(--border);border-radius:16px;
+  padding:40px 40px 32px;width:420px;box-shadow:0 4px 32px rgba(0,0,0,.08)}
+.login-icon{width:60px;height:60px;background:var(--blue);border-radius:14px;
+  display:flex;align-items:center;justify-content:center;font-size:28px;
+  margin:0 auto 18px;box-shadow:0 4px 14px rgba(13,148,136,.3)}
+.login-card h1{font-size:20px;font-weight:800;text-align:center;color:var(--txt);line-height:1.3}
+.login-sub{text-align:center;color:var(--muted);font-size:13px;margin-top:5px;margin-bottom:4px;line-height:1.5}
+.fgrp{display:flex;flex-direction:column;gap:5px;margin-top:14px}
+.flbl{font-size:12px;font-weight:600;color:var(--txt)}
 .finp{padding:9px 12px;border:1px solid var(--border);border-radius:8px;
-  background:#fff;outline:none;transition:border-color .15s;width:100%}
-.finp:focus{border-color:var(--blue)}
+  background:#fff;outline:none;transition:border-color .15s,box-shadow .15s;width:100%}
+.finp:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(13,148,136,.1)}
 #loginErr{padding:10px 14px;background:#FEF2F2;border:1px solid #FECACA;
-  border-radius:6px;color:var(--red);font-size:12px;margin-top:10px;
+  border-radius:8px;color:var(--red);font-size:12px;margin-top:10px;
   white-space:pre-wrap;line-height:1.6;word-break:break-word}
-.dev-credit{color:#CBD5E1;font-size:11px;text-align:center}
+.demo-creds{margin-top:18px;padding:13px 14px;background:var(--page);
+  border:1px solid var(--border);border-radius:10px}
+.demo-creds-lbl{font-size:10px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.7px;color:var(--muted);margin-bottom:8px}
+.demo-creds-row{display:flex;gap:7px;flex-wrap:wrap}
+.cred-chip{background:#fff;border:1px solid var(--border);border-radius:6px;
+  padding:4px 10px;font-size:11px;font-family:monospace;color:var(--txt)}
+.login-footer{font-size:11px;color:var(--muted);text-align:center}
 
-/* Buttons */
+/* ── Buttons ────────────────────────────────────────── */
 .btn{display:inline-flex;align-items:center;justify-content:center;
-  padding:8px 16px;border:none;border-radius:8px;font-weight:600;transition:background .15s;gap:5px}
+  padding:8px 16px;border:none;border-radius:8px;font-weight:600;
+  transition:background .15s;gap:5px}
 .btn-blue{background:var(--blue);color:#fff}.btn-blue:hover{background:var(--blue-dk)}
 .btn-ghost{background:var(--page);color:var(--txt);border:1px solid var(--border)}
 .btn-ghost:hover{background:var(--border)}
@@ -48,74 +61,104 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--txt)}
 .btn-danger{background:#FEF2F2;color:var(--red);border:1px solid #FECACA}
 .btn-danger:hover{background:#FEE2E2}
 
-/* Topbar */
-#topbar{background:var(--blue);color:#fff;height:52px;padding:0 20px;
-  display:flex;align-items:center;justify-content:space-between;
-  position:sticky;top:0;z-index:200;box-shadow:0 2px 8px rgba(0,0,0,.15)}
-.tb-left{font-size:14px;font-weight:700;letter-spacing:-.2px}
-.tb-center{font-size:11px;color:rgba(255,255,255,.7)}
-.tb-right{display:flex;align-items:center;gap:10px}
-.nav-btn{background:transparent;border:1px solid rgba(255,255,255,.3);color:#fff;
-  border-radius:6px;padding:4px 11px;font-size:12px}
-.nav-btn:hover,.nav-btn.active{background:rgba(255,255,255,.2)}
-.role-pill{background:rgba(255,255,255,.2);padding:2px 7px;border-radius:20px;
-  font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
-.logout-btn{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);
-  color:#fff;border-radius:6px;padding:4px 11px;font-size:12px}
-.logout-btn:hover{background:rgba(255,255,255,.2)}
+/* ── Sidebar (= #topbar, background overridden by JS inline style) ── */
+#dash{display:flex;min-height:100vh}
+#topbar{width:var(--sidebar-w);min-width:var(--sidebar-w);background:var(--blue);
+  display:flex;flex-direction:column;height:100vh;position:sticky;top:0;
+  overflow-y:auto;z-index:200;flex-shrink:0}
+.sb-brand{padding:18px 16px 14px;border-bottom:1px solid rgba(255,255,255,.12)}
+.sb-brand-inner{display:flex;align-items:center;gap:10px}
+.sb-brand-icon{width:32px;height:32px;background:rgba(255,255,255,.18);border-radius:8px;
+  display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+#tbAppTitle{font-size:12px;font-weight:700;color:#fff;line-height:1.35;letter-spacing:-.1px}
+.sb-nav{padding:12px 10px;flex:1}
+.sb-section-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;
+  color:rgba(255,255,255,.45);padding:10px 6px 4px;margin-top:2px}
+.nav-btn{display:flex;align-items:center;gap:9px;width:100%;
+  padding:9px 12px;border:none;background:transparent;
+  color:rgba(255,255,255,.75);border-radius:8px;font-size:13px;font-weight:500;
+  text-align:left;transition:background .13s,color .13s;margin-bottom:2px}
+.nav-btn:hover{background:rgba(255,255,255,.12);color:#fff}
+.nav-btn.active{background:rgba(255,255,255,.2);color:#fff;font-weight:700}
+.nav-icon{font-size:14px;line-height:1;flex-shrink:0}
+.sb-bottom{padding:14px 16px;border-top:1px solid rgba(255,255,255,.12);margin-top:auto}
+.role-pill{background:rgba(255,255,255,.18);padding:3px 9px;border-radius:20px;
+  font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#fff;
+  display:inline-block}
 
-/* Notification Bell */
+/* ── Main content wrapper ───────────────────────────── */
+.main-wrap{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+
+/* ── Top strip ──────────────────────────────────────── */
+.top-strip{height:52px;background:var(--card);border-bottom:1px solid var(--border);
+  padding:0 20px;display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:100;gap:12px;flex-shrink:0}
+.ts-left{display:flex;align-items:center;gap:12px}
+.ts-right{display:flex;align-items:center;gap:6px}
+.last-upd-txt{font-size:11px;color:var(--muted)}
+.ts-divider{width:1px;height:20px;background:var(--border);margin:0 4px}
+.ts-acct-btn{display:flex;align-items:center;gap:7px;padding:5px 10px;
+  border:1px solid var(--border);border-radius:8px;background:#fff;
+  font-size:12px;color:var(--txt);font-weight:600}
+.ts-acct-btn:hover{background:var(--page)}
+.ts-avatar{width:26px;height:26px;border-radius:50%;background:var(--blue);
+  color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;
+  justify-content:center;flex-shrink:0}
+.ts-logout{padding:5px 12px;border:1px solid var(--border);border-radius:8px;
+  background:#fff;font-size:12px;font-weight:600;color:var(--txt)}
+.ts-logout:hover{background:var(--page)}
+
+/* ── Notification Bell ──────────────────────────────── */
 .notif-wrap{position:relative}
-.notif-bell-btn{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.3);
-  color:#fff;border-radius:6px;padding:4px 11px;font-size:16px;line-height:1;
-  display:flex;align-items:center;gap:4px}
-.notif-bell-btn:hover{background:rgba(255,255,255,.25)}
-.notif-badge{background:#EF4444;color:#fff;font-size:10px;font-weight:800;
-  min-width:17px;height:17px;border-radius:10px;display:inline-flex;
-  align-items:center;justify-content:center;padding:0 4px;line-height:1}
-.notif-panel{position:absolute;top:calc(100% + 10px);right:0;width:360px;
-  background:#fff;border:1px solid var(--border);border-radius:10px;
-  box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:500;overflow:hidden}
+.notif-bell-btn{background:#fff;border:1px solid var(--border);color:var(--txt);
+  border-radius:8px;padding:5px 10px;font-size:15px;line-height:1;
+  display:flex;align-items:center;gap:5px}
+.notif-bell-btn:hover{background:var(--page)}
+.notif-badge{background:var(--red);color:#fff;font-size:9px;font-weight:800;
+  min-width:16px;height:16px;border-radius:10px;display:inline-flex;
+  align-items:center;justify-content:center;padding:0 3px;line-height:1}
+.notif-panel{position:absolute;top:calc(100% + 8px);right:0;width:360px;
+  background:#fff;border:1px solid var(--border);border-radius:12px;
+  box-shadow:0 8px 32px rgba(0,0,0,.12);z-index:500;overflow:hidden}
 .notif-panel-hdr{display:flex;align-items:center;justify-content:space-between;
-  padding:10px 14px;border-bottom:1px solid var(--border);background:var(--page)}
-.notif-panel-hdr span{font-size:13px;font-weight:700;color:var(--txt)}
+  padding:12px 14px;border-bottom:1px solid var(--border)}
+.notif-panel-hdr span{font-size:13px;font-weight:700;color:var(--txt);
+  display:flex;align-items:center;gap:6px}
 .notif-mark-all{font-size:11px;color:var(--blue);background:none;border:none;
-  padding:2px 6px;border-radius:4px}
+  padding:3px 8px;border-radius:6px;font-weight:600}
 .notif-mark-all:hover{background:var(--blue-lt)}
 .notif-list{max-height:320px;overflow-y:auto}
 .notif-empty{text-align:center;padding:24px;color:var(--muted);font-size:12px}
 .notif-item{padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;
   transition:background .12s;display:flex;gap:9px;align-items:flex-start}
-.notif-item:hover{background:var(--blue-lt)}
-.notif-item.unread{background:#F0F9FF}
-.notif-item.unread .notif-dot{background:var(--blue)}
+.notif-item:hover{background:var(--page)}
+.notif-item.unread{background:var(--blue-lt)}
+.notif-item.unread .notif-dot{background:var(--blue);border-color:var(--blue)}
 .notif-dot{width:8px;height:8px;border-radius:50%;background:transparent;
   flex-shrink:0;margin-top:4px;border:2px solid var(--border)}
 .notif-content{flex:1;min-width:0}
 .notif-msg{font-size:12px;color:var(--txt);line-height:1.4;margin-bottom:2px}
 .notif-time{font-size:10px;color:var(--muted)}
-.notif-ws-dot{width:7px;height:7px;border-radius:50%;background:#9CA3AF;
-  display:inline-block;margin-right:4px}
+/* wsDot: small live-status indicator shown inside bell button */
+.notif-ws-dot{width:7px;height:7px;border-radius:50%;background:#D1D5DB;
+  display:inline-block;flex-shrink:0}
 .notif-ws-dot.connected{background:var(--green)}
 
-/* Page */
+/* ── Page area ──────────────────────────────────────── */
 .page{padding:20px 22px}
 
-/* Stat cards */
+/* ── Stat cards ─────────────────────────────────────── */
 .stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
-.stat-card{background:var(--card);border:1px solid var(--border);border-radius:10px;
-  padding:14px 18px;border-left:4px solid transparent;cursor:pointer;
-  transition:box-shadow .15s;user-select:none}
-.stat-card:hover{box-shadow:0 2px 10px rgba(0,0,0,.08)}
-.stat-card.s-active{border-left-color:var(--red)}
-.stat-card.s-inprog{border-left-color:var(--amber)}
-.stat-card.s-resolved{border-left-color:var(--green)}
-.stat-card.selected{outline:2px solid var(--blue);outline-offset:1px;background:var(--blue-lt)}
-.stat-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
-.stat-num{font-size:32px;font-weight:800;line-height:1;margin-top:3px}
-.stat-hint{font-size:11px;color:var(--muted);margin-top:2px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;
+  padding:18px 20px;cursor:pointer;transition:box-shadow .15s,border-color .15s;user-select:none}
+.stat-card:hover{box-shadow:0 2px 12px rgba(0,0,0,.07)}
+.stat-card.selected{border-color:var(--blue);box-shadow:0 0 0 3px rgba(13,148,136,.12)}
+.stat-icon{font-size:22px;margin-bottom:8px;line-height:1}
+.stat-lbl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+.stat-num{font-size:32px;font-weight:800;line-height:1.1;margin-top:3px;color:var(--txt)}
+.stat-hint{font-size:11px;color:var(--muted);margin-top:3px}
 
-/* Filter bar */
+/* ── Filter bar ─────────────────────────────────────── */
 .filter-bar{background:var(--card);border:1px solid var(--border);border-radius:10px;
   padding:10px 16px;margin-bottom:14px;display:flex;flex-wrap:wrap;gap:7px;align-items:center}
 .filter-bar select,.filter-bar input[type=date]{
@@ -124,285 +167,345 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--txt)}
 .filter-bar select:focus,.filter-bar input[type=date]:focus{border-color:var(--blue)}
 .dgrp{display:flex;gap:3px}
 .dbtn{padding:5px 10px;border:1px solid var(--border);border-radius:7px;
-  background:var(--card);font-size:12px;height:32px}
+  background:var(--card);font-size:12px;height:32px;color:var(--txt)}
 .dbtn:hover{background:var(--page)}
 .dbtn.on{background:var(--blue);color:#fff;border-color:var(--blue)}
 .sep{width:1px;height:26px;background:var(--border);align-self:center}
-.show-all-btn{background:#fff;border:2px solid var(--blue);color:var(--blue);
-  border-radius:7px;padding:4px 12px;font-size:12px;font-weight:700}
-.show-all-btn:hover{background:var(--blue-lt)}
+.show-all-btn{background:#fff;border:1px solid var(--border);color:var(--txt);
+  border-radius:7px;padding:4px 12px;font-size:12px;font-weight:600}
+.show-all-btn:hover{background:var(--page)}
 
-/* Table */
-.tbl-card{background:var(--card);border:1px solid var(--border);border-radius:10px}
+/* ── Table ──────────────────────────────────────────── */
+.tbl-card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
 .tbl-wrap{overflow-x:auto}
 table{width:100%;border-collapse:collapse;min-width:900px}
-thead th{background:var(--blue);color:#fff;padding:10px 12px;text-align:left;
-  font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
+thead th{background:var(--card);color:var(--muted);padding:10px 12px;text-align:left;
+  font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;
+  white-space:nowrap;border-bottom:1px solid var(--border)}
 tbody tr:nth-child(odd){background:var(--card)}
 tbody tr:nth-child(even){background:var(--row2)}
-tbody tr:hover{background:#EFF6FF;cursor:pointer}
+tbody tr:hover{background:var(--blue-lt);cursor:pointer}
 tbody td{padding:9px 12px;font-size:12px;vertical-align:middle;
-  border-bottom:1px solid var(--border);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  border-bottom:1px solid var(--border);max-width:200px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 tbody tr:last-child td{border-bottom:none}
 .empty-row td{text-align:center;padding:40px;color:var(--muted);font-size:14px;white-space:normal}
 
-/* Pagination */
+/* ── Pagination ─────────────────────────────────────── */
 .pagination{display:flex;align-items:center;justify-content:space-between;
   padding:10px 16px;border-top:1px solid var(--border);background:var(--card)}
 .pg-info{font-size:12px;color:var(--muted)}
 .pg-btns{display:flex;gap:4px;align-items:center}
 .pg-btn{padding:4px 10px;border:1px solid var(--border);border-radius:6px;
-  background:#fff;font-size:12px;min-width:32px}
+  background:#fff;font-size:12px;min-width:32px;color:var(--txt)}
 .pg-btn:hover:not(:disabled){background:var(--page)}
 .pg-btn:disabled{opacity:.4;cursor:default}
 .pg-btn.active-pg{background:var(--blue);color:#fff;border-color:var(--blue)}
 .rows-sel{margin-left:6px;padding:3px 6px;border:1px solid var(--border);
   border-radius:6px;background:#fff;font-size:12px}
 
-/* Badges */
+/* ── Badges ─────────────────────────────────────────── */
 .badge{display:inline-block;padding:2px 9px;border-radius:20px;
   font-size:11px;font-weight:700;white-space:nowrap;text-transform:capitalize}
-.b-active{background:#FEF2F2;color:#B91C1C}
-.b-in_progress{background:#FFFBEB;color:#92400E}
+.b-active{background:#FFFBEB;color:#B45309}
+.b-in_progress{background:#EFF6FF;color:#1D4ED8}
 .b-resolved{background:#ECFDF5;color:#065F46}
 
-/* Modal */
-#modalOverlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;
+/* ── Modals ─────────────────────────────────────────── */
+#modalOverlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;
   display:flex;align-items:flex-start;justify-content:center;
   padding:28px 16px;overflow-y:auto}
-.modal{background:var(--card);border-radius:12px;width:100%;max-width:980px;
-  box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.modal{background:var(--card);border-radius:14px;width:100%;max-width:980px;
+  box-shadow:0 20px 60px rgba(0,0,0,.2)}
 .modal-hdr{display:flex;align-items:center;justify-content:space-between;
-  padding:14px 20px;border-bottom:1px solid var(--border)}
-.modal-hdr h2{font-size:15px;font-weight:700}
-.modal-close{background:none;border:none;font-size:20px;color:var(--muted);
-  cursor:pointer;padding:2px 7px;border-radius:6px;line-height:1}
+  padding:16px 22px;border-bottom:1px solid var(--border)}
+.modal-hdr h2{font-size:15px;font-weight:700;color:var(--txt)}
+.modal-close{background:none;border:none;font-size:18px;color:var(--muted);
+  cursor:pointer;padding:4px 8px;border-radius:6px;line-height:1}
 .modal-close:hover{background:var(--page)}
 .modal-body{display:grid;grid-template-columns:1fr 300px}
-.modal-left{padding:18px 20px;border-right:1px solid var(--border);
+.modal-left{padding:18px 22px;border-right:1px solid var(--border);
   overflow-y:auto;max-height:calc(88vh - 52px)}
-.modal-right{padding:18px 20px;overflow-y:auto;
+.modal-right{padding:18px 22px;overflow-y:auto;
   max-height:calc(88vh - 52px);display:flex;flex-direction:column;gap:14px}
 .dgrid{display:grid;grid-template-columns:118px 1fr;gap:6px 10px;font-size:13px}
-.dk{color:var(--muted);font-weight:600;font-size:11px;padding-top:2px;text-transform:uppercase;letter-spacing:.3px}
+.dk{color:var(--muted);font-weight:600;font-size:11px;padding-top:2px;
+  text-transform:uppercase;letter-spacing:.3px}
 .dv{word-break:break-word}
-.ablock{background:var(--page);border:1px solid var(--border);border-radius:8px;padding:12px}
+.ablock{background:var(--page);border:1px solid var(--border);border-radius:10px;padding:14px}
 .ablock-title{font-size:10px;font-weight:800;text-transform:uppercase;
   letter-spacing:.6px;color:var(--muted);margin-bottom:8px}
 .msg{font-size:12px;padding:5px 9px;border-radius:6px;margin-top:5px}
 .msg-ok{background:#ECFDF5;color:#065F46;border:1px solid #A7F3D0}
 .msg-err{background:#FEF2F2;color:#B91C1C;border:1px solid #FECACA}
-#statusSel.v-active{border-color:var(--red)!important;color:#B91C1C}
-#statusSel.v-in_progress{border-color:var(--amber)!important;color:#92400E}
+#statusSel.v-active{border-color:var(--amber)!important;color:#B45309}
+#statusSel.v-in_progress{border-color:#3B82F6!important;color:#1D4ED8}
 #statusSel.v-resolved{border-color:var(--green)!important;color:#065F46}
-.note{background:#fff;border:1px solid var(--border);border-radius:7px;padding:9px 11px;margin-bottom:7px}
+.note{background:#fff;border:1px solid var(--border);border-radius:8px;
+  padding:10px 12px;margin-bottom:7px}
 .note-meta{font-size:11px;color:var(--muted);margin-bottom:3px}
 .note-body{font-size:13px;white-space:pre-wrap}
 textarea.note-inp{width:100%;padding:7px 9px;border:1px solid var(--border);
-  border-radius:7px;resize:vertical;min-height:56px;outline:none;font-size:13px}
+  border-radius:8px;resize:vertical;min-height:60px;outline:none;font-size:13px}
 textarea.note-inp:focus{border-color:var(--blue)}
 .attach-list{margin-top:6px}
 .attach-item{display:flex;align-items:center;justify-content:space-between;
-  padding:5px 8px;background:#fff;border:1px solid var(--border);
-  border-radius:6px;margin-bottom:5px;font-size:12px}
+  padding:6px 10px;background:#fff;border:1px solid var(--border);
+  border-radius:8px;margin-bottom:5px;font-size:12px}
 .attach-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px}
-.pw-stack{display:flex;flex-direction:column;gap:6px}
+.pw-stack{display:flex;flex-direction:column;gap:7px}
 
-/* Users page */
+/* ── Users page ─────────────────────────────────────── */
 .usr-wrap{max-width:820px}
-.usr-form{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-top:14px}
+.usr-form{background:var(--card);border:1px solid var(--border);border-radius:12px;
+  padding:18px;margin-top:14px}
 .usr-grid{display:grid;grid-template-columns:1fr 1fr 150px 90px;gap:9px;align-items:end}
-.usr-tbl{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:14px}
-.pg-title{font-size:19px;font-weight:700;margin-bottom:3px}
+.usr-tbl{background:var(--card);border:1px solid var(--border);border-radius:12px;
+  overflow:hidden;margin-top:14px}
+.pg-title{font-size:20px;font-weight:800;margin-bottom:3px;color:var(--txt)}
 .pg-sub{color:var(--muted);font-size:13px}
 </style>
 </head>
 <body>
 
-<!-- LOGIN -->
+<!-- ════════════════ LOGIN ════════════════ -->
 <div id="loginScreen">
-  <div class="login-box">
+  <div class="login-card">
+    <div class="login-icon">🎫</div>
     <h1>IT Ticketing System</h1>
-    <div class="sub">Admin Console</div>
-    <div class="fgrp"><label class="flbl">Username</label>
-      <input class="finp" id="lu" type="text" placeholder="admin" autocomplete="username"/></div>
-    <div class="fgrp"><label class="flbl">Password</label>
-      <input class="finp" id="lp" type="password" placeholder="••••••••" autocomplete="current-password"/></div>
-    <div class="fgrp"><button class="btn btn-blue w100" onclick="doLogin()">Login</button></div>
+    <div class="login-sub">Admin &amp; technician console for the helpdesk.</div>
+    <div class="fgrp">
+      <label class="flbl">Username</label>
+      <input class="finp" id="lu" type="text" placeholder="admin" autocomplete="username"/>
+    </div>
+    <div class="fgrp">
+      <label class="flbl">Password</label>
+      <input class="finp" id="lp" type="password" placeholder="••••••••" autocomplete="current-password"/>
+    </div>
+    <div class="fgrp">
+      <button class="btn btn-blue w100" style="padding:11px 16px;font-size:14px;margin-top:4px" onclick="doLogin()">Sign in →</button>
+    </div>
     <div id="loginErr" class="hidden"></div>
+    <div class="demo-creds">
+      <div class="demo-creds-lbl">Demo credentials</div>
+      <div class="demo-creds-row">
+        <span class="cred-chip">admin / super_admin</span>
+        <span class="cred-chip">sarah.k / technician</span>
+      </div>
+    </div>
   </div>
-  <div class="dev-credit">IT Ticketing System v1.0</div>
+  <div class="login-footer">IT Ticketing System v1.0</div>
 </div>
 
-<!-- DASHBOARD -->
+<!-- ════════════════ DASHBOARD ════════════════ -->
 <div id="dash" class="hidden">
+
+  <!-- SIDEBAR (#topbar — background overridden by initDashboard via inline style) -->
   <div id="topbar">
-    <div class="tb-left" id="tbAppTitle">IT Ticketing System</div>
-    <div class="tb-center">Last updated: <span id="lastUpd">—</span></div>
-    <div class="tb-right">
-      <button class="nav-btn active" id="navTkts" onclick="showPage('tickets')">🎫 Tickets</button>
-      <button class="nav-btn hidden"  id="navUsrs" onclick="showPage('users')">👥 Users</button>
-      <button class="nav-btn hidden"  id="navUpd"  onclick="showPage('update')">🔄 Updates</button>
-
-      <!-- Notification Bell -->
-      <div class="notif-wrap" id="notifWrap">
-        <button class="notif-bell-btn" id="notifBellBtn" onclick="toggleNotifPanel(event)" title="Notifications">
-          <span id="wsDot" class="notif-ws-dot"></span>🔔
-          <span class="notif-badge hidden" id="notifBadge">0</span>
-        </button>
-        <div class="notif-panel hidden" id="notifPanel">
-          <div class="notif-panel-hdr">
-            <span>Notifications</span>
-            <button class="notif-mark-all" onclick="markAllRead()">Mark all read</button>
-          </div>
-          <div class="notif-list" id="notifList">
-            <div class="notif-empty">Loading…</div>
-          </div>
-        </div>
+    <div class="sb-brand">
+      <div class="sb-brand-inner">
+        <div class="sb-brand-icon">🎫</div>
+        <div id="tbAppTitle">IT Ticketing</div>
       </div>
-
+    </div>
+    <nav class="sb-nav">
+      <div class="sb-section-lbl">Menu</div>
+      <button class="nav-btn active" id="navTkts" onclick="showPage('tickets')">
+        <span class="nav-icon">🎫</span> Tickets
+      </button>
+      <button class="nav-btn hidden" id="navUsrs" onclick="showPage('users')">
+        <span class="nav-icon">👥</span> Users
+      </button>
+      <button class="nav-btn hidden" id="navUpd" onclick="showPage('update')">
+        <span class="nav-icon">🔄</span> Updates
+      </button>
+    </nav>
+    <div class="sb-bottom">
       <span id="tbRole" class="role-pill"></span>
-      <button class="nav-btn" onclick="openAccount()" title="My Account">👤 Account</button>
-      <button class="logout-btn" onclick="doLogout()">Logout</button>
     </div>
   </div>
 
-  <!-- TICKETS PAGE -->
-  <div id="pgTickets" class="page">
-    <div class="stat-row">
-      <div class="stat-card s-active"   id="cActive"   onclick="cardClick('active')"      title="Click to filter">
-        <div class="stat-lbl">Active</div><div class="stat-num" id="nActive">—</div>
-        <div class="stat-hint" id="hActive">tickets</div></div>
-      <div class="stat-card s-inprog"   id="cInProg"   onclick="cardClick('in_progress')" title="Click to filter">
-        <div class="stat-lbl">In Progress</div><div class="stat-num" id="nInProg">—</div>
-        <div class="stat-hint" id="hInProg">tickets</div></div>
-      <div class="stat-card s-resolved" id="cResolved"  onclick="cardClick('resolved')"   title="Click to filter">
-        <div class="stat-lbl">Resolved</div><div class="stat-num" id="nResolved">—</div>
-        <div class="stat-hint" id="hResolved">tickets</div></div>
-    </div>
+  <!-- MAIN AREA -->
+  <div class="main-wrap">
 
-    <div class="filter-bar">
-      <button class="show-all-btn" onclick="showAll()">⟳ Show All</button>
-      <div class="sep"></div>
-      <select id="fStatus" onchange="syncDrop()">
-        <option value="">All Statuses</option>
-        <option value="active">Active</option>
-        <option value="in_progress">In Progress</option>
-        <option value="resolved">Resolved</option>
-      </select>
-      <select id="fCat" onchange="applyAndLoad()">
-        <option value="">All Categories</option>
-        <option>Other</option><option>Computer / Workstation</option>
-        <option>Network / Internet / WiFi</option><option>Printer</option>
-        <option>Scanner</option><option>Phone / VoIP</option>
-        <option>Browser</option><option>Software / Application</option>
-        <option>Email</option><option>VPN / Remote Access</option>
-        <option>Hardware</option><option>File Access / Permissions</option>
-        <option>Performance Issues</option>
-      </select>
-      <div class="sep"></div>
-      <div class="dgrp">
-        <button class="dbtn" id="dToday"  onclick="dateRange('today')">Today</button>
-        <button class="dbtn" id="dWeek"   onclick="dateRange('week')">Last 7 Days</button>
-        <button class="dbtn" id="dMonth"  onclick="dateRange('month')">Last 30 Days</button>
-        <button class="dbtn" id="dCustom" onclick="dateRange('custom')">Custom</button>
+    <!-- Top strip -->
+    <div class="top-strip">
+      <div class="ts-left">
+        <span class="last-upd-txt">Last updated: <span id="lastUpd">—</span></span>
       </div>
-      <div id="customDates" style="display:none;gap:6px;align-items:center">
-        <input type="date" id="dFrom" onchange="applyAndLoad()"/>
-        <span class="muted sm">to</span>
-        <input type="date" id="dTo" onchange="applyAndLoad()"/>
+      <div class="ts-right">
+        <!-- Notification Bell -->
+        <div class="notif-wrap" id="notifWrap">
+          <button class="notif-bell-btn" id="notifBellBtn" onclick="toggleNotifPanel(event)" title="Notifications">
+            <span id="wsDot" class="notif-ws-dot"></span>🔔
+            <span class="notif-badge hidden" id="notifBadge">0</span>
+          </button>
+          <div class="notif-panel hidden" id="notifPanel">
+            <div class="notif-panel-hdr">
+              <span>Notifications</span>
+              <button class="notif-mark-all" onclick="markAllRead()">Mark all read</button>
+            </div>
+            <div class="notif-list" id="notifList">
+              <div class="notif-empty">Loading…</div>
+            </div>
+          </div>
+        </div>
+        <div class="ts-divider"></div>
+        <button class="ts-acct-btn" onclick="openAccount()" title="My Account">
+          <div class="ts-avatar">👤</div>
+          Account
+        </button>
+        <button class="ts-logout" onclick="doLogout()">Sign out</button>
       </div>
     </div>
 
-    <div class="tbl-card">
-      <div class="tbl-wrap">
-        <table>
-          <thead><tr>
-            <th>Ticket ID</th><th>User</th><th>Hostname</th>
-            <th>Category</th><th>Sub-Cat</th><th>Status</th>
-            <th>Assigned To</th><th>Created</th><th>Action</th>
-          </tr></thead>
-          <tbody id="tBody"><tr class="empty-row"><td colspan="9">Loading…</td></tr></tbody>
-        </table>
-      </div>
-      <div class="pagination">
-        <div class="pg-info" id="pgInfo">—</div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <span class="sm muted">Rows:</span>
-          <select class="rows-sel" id="rowsSel" onchange="changePageSize()">
-            <option value="10" selected>10</option>
-            <option value="15">15</option>
-            <option value="20">20</option>
-          </select>
-          <div class="pg-btns" id="pgBtns"></div>
+    <!-- ── TICKETS PAGE ── -->
+    <div id="pgTickets" class="page">
+      <div class="stat-row">
+        <div class="stat-card" id="cActive" onclick="cardClick('active')" title="Click to filter">
+          <div class="stat-icon">⏱</div>
+          <div class="stat-lbl">Active</div>
+          <div class="stat-num" id="nActive">—</div>
+          <div class="stat-hint" id="hActive">tickets</div>
+        </div>
+        <div class="stat-card" id="cInProg" onclick="cardClick('in_progress')" title="Click to filter">
+          <div class="stat-icon">⚡</div>
+          <div class="stat-lbl">In Progress</div>
+          <div class="stat-num" id="nInProg">—</div>
+          <div class="stat-hint" id="hInProg">tickets</div>
+        </div>
+        <div class="stat-card" id="cResolved" onclick="cardClick('resolved')" title="Click to filter">
+          <div class="stat-icon">✅</div>
+          <div class="stat-lbl">Resolved</div>
+          <div class="stat-num" id="nResolved">—</div>
+          <div class="stat-hint" id="hResolved">tickets</div>
         </div>
       </div>
-    </div>
-  </div>
 
-  <!-- USERS PAGE (admin only) -->
-  <div id="pgUsers" class="page hidden">
-    <div class="usr-wrap">
-      <div class="pg-title">User Management</div>
-      <div class="pg-sub">Create and manage admin and technician accounts.</div>
-      <div class="usr-form">
-        <div class="ablock-title">Add New User</div>
-        <div class="usr-grid">
-          <div class="fgrp" style="margin-top:0"><label class="flbl">Username</label>
-            <input class="finp" id="newUname" placeholder="jsmith"/></div>
-          <div class="fgrp" style="margin-top:0"><label class="flbl">Password (min 8 chars)</label>
-            <input class="finp" id="newPw" type="password" placeholder="••••••••"/></div>
-          <div class="fgrp" style="margin-top:0"><label class="flbl">Role</label>
-            <select class="finp" id="newRole">
-              <option value="technician">Technician</option>
-              <option value="super_admin">Admin</option>
-            </select></div>
-          <div style="display:flex;align-items:flex-end">
-            <button class="btn btn-blue w100" onclick="createUser()">Create</button></div>
+      <div class="filter-bar">
+        <button class="show-all-btn" onclick="showAll()">⟳ Show All</button>
+        <div class="sep"></div>
+        <select id="fStatus" onchange="syncDrop()">
+          <option value="">All Statuses</option>
+          <option value="active">Active</option>
+          <option value="in_progress">In Progress</option>
+          <option value="resolved">Resolved</option>
+        </select>
+        <select id="fCat" onchange="applyAndLoad()">
+          <option value="">All Categories</option>
+          <option>Other</option><option>Computer / Workstation</option>
+          <option>Network / Internet / WiFi</option><option>Printer</option>
+          <option>Scanner</option><option>Phone / VoIP</option>
+          <option>Browser</option><option>Software / Application</option>
+          <option>Email</option><option>VPN / Remote Access</option>
+          <option>Hardware</option><option>File Access / Permissions</option>
+          <option>Performance Issues</option>
+        </select>
+        <div class="sep"></div>
+        <div class="dgrp">
+          <button class="dbtn" id="dToday"  onclick="dateRange('today')">Today</button>
+          <button class="dbtn" id="dWeek"   onclick="dateRange('week')">Last 7 Days</button>
+          <button class="dbtn" id="dMonth"  onclick="dateRange('month')">Last 30 Days</button>
+          <button class="dbtn" id="dCustom" onclick="dateRange('custom')">Custom</button>
         </div>
-        <div id="usrMsg" class="hidden mt2"></div>
+        <div id="customDates" style="display:none;gap:6px;align-items:center">
+          <input type="date" id="dFrom" onchange="applyAndLoad()"/>
+          <span class="muted sm">to</span>
+          <input type="date" id="dTo" onchange="applyAndLoad()"/>
+        </div>
       </div>
-      <div class="usr-tbl">
-        <div class="tbl-wrap"><table>
-          <thead><tr><th>ID</th><th>Username</th><th>Role</th><th>Action</th></tr></thead>
-          <tbody id="uBody"><tr class="empty-row"><td colspan="4">Loading…</td></tr></tbody>
-        </table></div>
-      </div>
-    </div>
-  </div>
 
-  <!-- UPDATES PAGE (admin only) -->
-  <div id="pgUpdate" class="page hidden">
-    <div style="max-width:680px">
-      <div class="pg-title">Software Updates</div>
-      <div class="pg-sub">Pull latest code from GitHub and restart the server automatically.</div>
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;margin-top:16px">
-        <div class="ablock-title">Current Version</div>
-        <div id="updCurrent" class="muted sm" style="margin-bottom:14px">Click "Check for Updates" to load.</div>
-        <div class="ablock-title">Latest Available on GitHub</div>
-        <div id="updLatest" class="muted sm" style="margin-bottom:14px">—</div>
-        <div id="updNotes" style="background:var(--page);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:12px;margin-bottom:14px;display:none;white-space:pre-wrap;max-height:160px;overflow-y:auto"></div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap">
-          <button class="btn btn-ghost" onclick="checkUpdates()">Check for Updates</button>
-          <button class="btn btn-blue" id="applyBtn" onclick="applyUpdate()" style="display:none">Apply Update &amp; Restart Server</button>
+      <div class="tbl-card">
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr>
+              <th>Ticket ID</th><th>User</th><th>Hostname</th>
+              <th>Category</th><th>Sub-Cat</th><th>Status</th>
+              <th>Assigned To</th><th>Created</th><th>Action</th>
+            </tr></thead>
+            <tbody id="tBody"><tr class="empty-row"><td colspan="9">Loading…</td></tr></tbody>
+          </table>
         </div>
-        <div id="updMsg" class="hidden mt2"></div>
-        <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">
-          <div class="ablock-title">Setup Instructions</div>
-          <div style="font-size:12px;color:var(--muted);line-height:1.8">
-            1. Push your project to a GitHub repository.<br>
-            2. Open <code>backend/routers/update.py</code> — set <code>GITHUB_REPO = "yourusername/yourrepo"</code>.<br>
-            3. On the server, clone the repo: <code>git clone https://github.com/yourusername/yourrepo.git</code><br>
-            4. Run: <code>pm2 start ecosystem.config.js</code><br>
-            5. Clicking "Apply Update" runs <code>git pull --rebase</code> and restarts the server.
+        <div class="pagination">
+          <div class="pg-info" id="pgInfo">—</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="sm muted">Rows:</span>
+            <select class="rows-sel" id="rowsSel" onchange="changePageSize()">
+              <option value="10" selected>10</option>
+              <option value="15">15</option>
+              <option value="20">20</option>
+            </select>
+            <div class="pg-btns" id="pgBtns"></div>
           </div>
         </div>
       </div>
     </div>
-  </div>
-</div>
 
-<!-- TICKET MODAL -->
+    <!-- ── USERS PAGE (admin only) ── -->
+    <div id="pgUsers" class="page hidden">
+      <div class="usr-wrap">
+        <div class="pg-title">User Management</div>
+        <div class="pg-sub">Create and manage admin and technician accounts.</div>
+        <div class="usr-form">
+          <div class="ablock-title">Add New User</div>
+          <div class="usr-grid">
+            <div class="fgrp" style="margin-top:0"><label class="flbl">Username</label>
+              <input class="finp" id="newUname" placeholder="jsmith"/></div>
+            <div class="fgrp" style="margin-top:0"><label class="flbl">Password (min 8 chars)</label>
+              <input class="finp" id="newPw" type="password" placeholder="••••••••"/></div>
+            <div class="fgrp" style="margin-top:0"><label class="flbl">Role</label>
+              <select class="finp" id="newRole">
+                <option value="technician">Technician</option>
+                <option value="super_admin">Admin</option>
+              </select></div>
+            <div style="display:flex;align-items:flex-end">
+              <button class="btn btn-blue w100" onclick="createUser()">Create</button></div>
+          </div>
+          <div id="usrMsg" class="hidden mt2"></div>
+        </div>
+        <div class="usr-tbl">
+          <div class="tbl-wrap"><table>
+            <thead><tr><th>ID</th><th>Username</th><th>Role</th><th>Action</th></tr></thead>
+            <tbody id="uBody"><tr class="empty-row"><td colspan="4">Loading…</td></tr></tbody>
+          </table></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── UPDATES PAGE (admin only) ── -->
+    <div id="pgUpdate" class="page hidden">
+      <div style="max-width:680px">
+        <div class="pg-title">Software Updates</div>
+        <div class="pg-sub">Pull latest code from GitHub and restart the server automatically.</div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:22px;margin-top:16px">
+          <div class="ablock-title">Current Version</div>
+          <div id="updCurrent" class="muted sm" style="margin-bottom:14px">Click "Check for Updates" to load.</div>
+          <div class="ablock-title">Latest Available on GitHub</div>
+          <div id="updLatest" class="muted sm" style="margin-bottom:14px">—</div>
+          <div id="updNotes" style="background:var(--page);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:12px;margin-bottom:14px;display:none;white-space:pre-wrap;max-height:160px;overflow-y:auto"></div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn btn-ghost" onclick="checkUpdates()">Check for Updates</button>
+            <button class="btn btn-blue" id="applyBtn" onclick="applyUpdate()" style="display:none">Apply Update &amp; Restart Server</button>
+          </div>
+          <div id="updMsg" class="hidden mt2"></div>
+          <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">
+            <div class="ablock-title">Setup Instructions</div>
+            <div style="font-size:12px;color:var(--muted);line-height:1.8">
+              1. Push your project to a GitHub repository.<br>
+              2. Open <code>backend/routers/update.py</code> — set <code>GITHUB_REPO = "yourusername/yourrepo"</code>.<br>
+              3. On the server, clone the repo: <code>git clone https://github.com/yourusername/yourrepo.git</code><br>
+              4. Run: <code>pm2 start ecosystem.config.js</code><br>
+              5. Clicking "Apply Update" runs <code>git pull --rebase</code> and restarts the server.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end .main-wrap -->
+</div><!-- end #dash -->
+
+<!-- ════════════════ TICKET MODAL ════════════════ -->
 <div id="modalOverlay" class="hidden" onclick="ovClick(event)">
  <div class="modal" onclick="event.stopPropagation()">
   <div class="modal-hdr">
@@ -426,7 +529,6 @@ textarea.note-inp:focus{border-color:var(--blue)}
      </div>
    </div>
    <div class="modal-right">
-     <!-- Status (admin OR assigned tech) -->
      <div class="ablock">
        <div class="ablock-title">Change Status</div>
        <select class="finp w100" id="statusSel" onchange="colorSel()">
@@ -437,7 +539,6 @@ textarea.note-inp:focus{border-color:var(--blue)}
        <button class="btn btn-blue btn-sm w100 mt2" onclick="doStatus()">Update Status</button>
        <div id="statusMsg" class="hidden"></div>
      </div>
-     <!-- Assign (admin only) — hidden for technicians via initDashboard -->
      <div class="ablock" id="assignBlock">
        <div class="ablock-title">Assign Technician</div>
        <select class="finp w100" id="assignSel">
@@ -451,26 +552,33 @@ textarea.note-inp:focus{border-color:var(--blue)}
  </div>
 </div>
 
-<!-- ACCOUNT MODAL -->
+<!-- ════════════════ ACCOUNT MODAL ════════════════ -->
 <div id="acctOverlay" class="hidden" onclick="acctOvClick(event)"
-  style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:600;display:flex;align-items:center;justify-content:center;padding:28px 16px">
+  style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:600;display:flex;align-items:center;justify-content:center;padding:28px 16px">
   <div class="modal" style="max-width:400px;width:100%" onclick="event.stopPropagation()">
     <div class="modal-hdr">
       <h2>My Account</h2>
       <button class="modal-close" onclick="closeAccount()">✕</button>
     </div>
-    <div style="padding:20px">
-      <div style="font-size:12px;color:var(--muted);margin-bottom:14px">
-        Logged in as <strong id="acctUser"></strong> &nbsp;<span id="acctRole" class="role-pill" style="background:var(--page);color:var(--muted);border:1px solid var(--border)"></span>
+    <div style="padding:22px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
+        <div style="width:44px;height:44px;border-radius:50%;background:var(--blue);color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">👤</div>
+        <div>
+          <div style="font-size:14px;font-weight:700;color:var(--txt)" id="acctUser"></div>
+          <span id="acctRole" class="role-pill" style="background:var(--page);color:var(--muted);border:1px solid var(--border);margin-top:4px;display:inline-block"></span>
+        </div>
       </div>
       <div class="ablock">
         <div class="ablock-title">Change Password</div>
         <div class="pw-stack">
-          <input class="finp" id="pwCur" type="password" placeholder="Current password"/>
-          <input class="finp" id="pwNew" type="password" placeholder="New password (min 8)"/>
-          <input class="finp" id="pwCfm" type="password" placeholder="Confirm new password"/>
+          <div><label class="flbl" style="display:block;margin-bottom:4px">Current password</label>
+            <input class="finp" id="pwCur" type="password" placeholder="••••••••"/></div>
+          <div><label class="flbl" style="display:block;margin-bottom:4px">New password</label>
+            <input class="finp" id="pwNew" type="password" placeholder="min 8 characters"/></div>
+          <div><label class="flbl" style="display:block;margin-bottom:4px">Confirm new password</label>
+            <input class="finp" id="pwCfm" type="password" placeholder="••••••••"/></div>
         </div>
-        <button class="btn btn-ghost btn-sm w100 mt2" onclick="doPw()">Change Password</button>
+        <button class="btn btn-ghost btn-sm w100 mt2" onclick="doPw()">✓ Change Password</button>
         <div id="pwMsg" class="hidden"></div>
       </div>
     </div>
@@ -481,7 +589,7 @@ textarea.note-inp:focus{border-color:var(--blue)}
 // ═══════════════════════════════════════════
 //  CONFIG  ← set your server IP/URL here
 // ═══════════════════════════════════════════
-const API = "http://YOUR_SERVER_IP:8000";
+const API = "http://localhost:8000";
 // Examples:
 //   const API = "http://192.168.1.50:8000";      // LAN
 //   const API = "http://localhost:8000";           // same machine
@@ -627,7 +735,7 @@ async function doLogin(){
     }
     showLE(msg);
   }finally{
-    if(loginBtn){ loginBtn.disabled=false; loginBtn.textContent="Login"; }
+    if(loginBtn){ loginBtn.disabled=false; loginBtn.textContent="Sign in →"; }
   }
 }
 function showLE(m){$("loginErr").textContent=m;show("loginErr");}
