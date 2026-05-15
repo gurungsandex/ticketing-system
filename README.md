@@ -332,8 +332,8 @@ python scripts/init_db.py
 
 This creates:
 - Admin user: `admin` / `admin123`
-- Technician user: `tech1` / `tech1pass`
-- 5 sample tickets
+- Technician user: `tech` / `tech12345`
+- 10 sample tickets
 
 ---
 

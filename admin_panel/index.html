@@ -289,8 +289,8 @@ textarea.note-inp:focus{border-color:var(--blue)}
     <div class="demo-creds">
       <div class="demo-creds-lbl">Demo credentials</div>
       <div class="demo-creds-row">
-        <span class="cred-chip">admin / super_admin</span>
-        <span class="cred-chip">sarah.k / technician</span>
+        <span class="cred-chip">admin / admin123</span>
+        <span class="cred-chip">tech / tech12345</span>
       </div>
     </div>
   </div>
@@ -758,7 +758,7 @@ function initDashboard(){
     show("assignBlock");   // ← admin sees assign section
     $("tbAppTitle").textContent="IT Ticketing System — Admin";
     document.title="IT Ticketing Admin";
-    $("topbar").style.background="#DC2626";
+    $("topbar").style.background="#4F46E5";
   } else {
     hide("navUsrs"); hide("navUpd");
     hide("assignBlock");   // ← technician CANNOT assign tickets
