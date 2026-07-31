@@ -33,7 +33,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 from fastapi.responses import FileResponse, HTMLResponse  # noqa: E402
 from migrations import run_migrations  # noqa: E402
-from routers import admin, chat, knowledge, notifications, tickets, update  # noqa: E402
+from routers import admin, chat, knowledge, notifications, settings, tickets, update  # noqa: E402
 from security import SecurityHeadersMiddleware, rate_limit  # noqa: E402
 from sqlalchemy.orm import Session  # noqa: E402
 from utils import utcnow  # noqa: E402
@@ -141,6 +141,7 @@ app.include_router(notifications.router)
 app.include_router(chat.router)
 app.include_router(knowledge.router)
 app.include_router(update.router)
+app.include_router(settings.router)
 
 
 # ── Static routes ─────────────────────────────────────

@@ -17,7 +17,7 @@ from typing import List, Optional
 import config
 import models
 import schemas
-from auth import decode_token, get_current_admin
+from auth import decode_token, get_current_admin, require_super_admin
 from database import get_db
 from fastapi import (
     APIRouter,
@@ -36,10 +36,25 @@ from websocket_manager import chat_hub, ws_manager
 router = APIRouter()
 
 VALID_AGENT_STATUSES = {"available", "busy", "away", "offline"}
+BUSY_NOTIFY_EVERY = 5  # a busy agent is re-pinged every N unread messages
 
 
 def _touch(session: models.ChatSession) -> None:
     session.last_activity = utcnow()
+
+
+def _available_usernames(db: Session, role: str) -> List[str]:
+    return [
+        a.username for a in db.query(models.AdminUser).filter(
+            models.AdminUser.role == role,
+            models.AdminUser.chat_status == "available",
+        ).all()
+    ]
+
+
+def _all_admin_usernames(db: Session) -> List[str]:
+    return [a.username for a in db.query(models.AdminUser).filter(
+        models.AdminUser.role == "super_admin").all()]
 
 
 def _msg_out(m: models.ChatMessage) -> dict:
@@ -191,14 +206,16 @@ def start_chat_session(
     )
     db.add(session)
 
-    # Notify all admins that a visitor is waiting for live support.
+    # Technicians are the front line — page them first. Fall back to admins
+    # only if literally no technician is available, so nothing goes unseen.
     who = session.display_name or "A user"
     msg = f"💬 {who} started a live chat" + (f": {session.subject}" if session.subject else "")
-    for admin in db.query(models.AdminUser).filter(
-        models.AdminUser.role == "super_admin"
-    ).all():
+    recipients = _available_usernames(db, "technician")
+    if not recipients:
+        recipients = _all_admin_usernames(db)
+    for username in recipients:
         db.add(models.Notification(
-            recipient_username=admin.username, ticket_id=session.id,
+            recipient_username=username, ticket_id=session.id,
             event_type="chat", message=msg,
         ))
     db.commit()
@@ -262,20 +279,41 @@ async def post_user_message(
     )
     db.add(m)
     _touch(session)
+    session.unread_count = (session.unread_count or 0) + 1
     db.commit()
     db.refresh(m)
 
     await chat_hub.publish(session_id, {"type": "message", **_msg_out(m)})
-    # Ping the assigned agent (or all admins if unclaimed).
-    targets = [session.agent_username] if session.agent_username else [
-        a.username for a in db.query(models.AdminUser).filter(
-            models.AdminUser.role == "super_admin").all()
-    ]
-    await ws_manager.broadcast_to_users(
-        [t for t in targets if t],
-        {"type": "chat_message", "session_id": session_id, "message": content},
-    )
+    await _notify_agent_of_message(db, session, content)
     return m
+
+
+async def _notify_agent_of_message(db: Session, session: models.ChatSession, content: str) -> None:
+    """Presence-aware ping: unclaimed sessions page available technicians
+    first (falling back to admins); claimed sessions notify the assigned
+    agent immediately if available, throttle to every Nth message if busy,
+    and stay silent if away/offline."""
+    payload = {"type": "chat_message", "session_id": session.id, "message": content}
+
+    if not session.agent_username:
+        targets = _available_usernames(db, "technician")
+        if not targets:
+            targets = _all_admin_usernames(db)
+        await ws_manager.broadcast_to_users(targets, payload)
+        return
+
+    agent = db.query(models.AdminUser).filter(
+        models.AdminUser.username == session.agent_username
+    ).first()
+    if not agent:
+        return
+    if agent.chat_status == "available":
+        await ws_manager.push(agent.username, payload)
+    elif agent.chat_status == "busy":
+        if session.unread_count and session.unread_count % BUSY_NOTIFY_EVERY == 0:
+            await ws_manager.push(agent.username, payload)
+    # away/offline: no notification — they'll see it (with the unread badge)
+    # whenever they come back and open the session.
 
 
 @router.post("/chat/sessions/{session_id}/close")
@@ -308,10 +346,15 @@ def list_chat_sessions(
         q = q.filter(models.ChatSession.status == status)
     else:
         q = q.filter(models.ChatSession.status.in_(["waiting", "active"]))
-    # Technicians see waiting sessions + those they've claimed.
+    # Technicians are the front line: they see unescalated waiting sessions
+    # plus whatever they've personally claimed. Once a session is escalated,
+    # it moves to the admin queue and drops out of the technician's default view.
     if current_user.role == "technician":
         q = q.filter(
-            (models.ChatSession.status == "waiting")
+            (
+                (models.ChatSession.status == "waiting")
+                & (models.ChatSession.escalated == False)  # noqa: E712
+            )
             | (models.ChatSession.agent_username == current_user.username)
         )
     return q.order_by(models.ChatSession.last_activity.desc()).all()
@@ -326,6 +369,12 @@ def get_chat_messages(
     session = db.query(models.ChatSession).filter(models.ChatSession.id == session_id).first()
     if not session:
         raise HTTPException(status_code=404, detail="Chat session not found")
+    # Only the assigned agent viewing their own thread clears the escalation
+    # counter — an unrelated staff member browsing must not silently suppress
+    # another agent's busy-notification threshold.
+    if session.unread_count and current_user.username == session.agent_username:
+        session.unread_count = 0
+        db.commit()
     return (
         db.query(models.ChatMessage)
         .filter(models.ChatMessage.session_id == session_id)
@@ -350,6 +399,7 @@ async def claim_chat_session(
 
     session.agent_username = current_user.username
     session.status = "active"
+    session.unread_count = 0
     _touch(session)
     sys_msg = models.ChatMessage(
         session_id=session_id, sender_role="system", sender_name="System",
@@ -360,6 +410,62 @@ async def claim_chat_session(
     db.refresh(session)
     await chat_hub.publish(session_id, {"type": "message", **_msg_out(sys_msg)})
     return session
+
+
+@router.post("/chat/sessions/{session_id}/escalate", response_model=schemas.ChatSessionResponse)
+async def escalate_chat_session(
+    session_id: str,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(get_current_admin),
+):
+    """Hand a session from the front-line technician queue to admins."""
+    session = db.query(models.ChatSession).filter(models.ChatSession.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Chat session not found")
+    if session.status == "closed":
+        raise HTTPException(status_code=400, detail="Chat is already closed.")
+
+    session.escalated = True
+    session.agent_username = None
+    session.status = "waiting"
+    session.unread_count = 0
+    _touch(session)
+    sys_msg = models.ChatMessage(
+        session_id=session_id, sender_role="system", sender_name="System",
+        content=f"{current_user.username} escalated this chat to admins.", created_at=utcnow(),
+    )
+    db.add(sys_msg)
+
+    msg = f"↑ Chat escalated by {current_user.username}"
+    for username in _all_admin_usernames(db):
+        db.add(models.Notification(
+            recipient_username=username, ticket_id=session.id,
+            event_type="chat", message=msg,
+        ))
+    db.commit()
+    db.refresh(session)
+    await chat_hub.publish(session_id, {"type": "message", **_msg_out(sys_msg)})
+    await ws_manager.broadcast_to_users(
+        _all_admin_usernames(db),
+        {"type": "chat_escalated", "session_id": session_id, "message": msg},
+    )
+    return session
+
+
+@router.delete("/chat/sessions/{session_id}")
+def delete_chat_session(
+    session_id: str,
+    db: Session = Depends(get_db),
+    _admin: models.AdminUser = Depends(require_super_admin),
+):
+    session = db.query(models.ChatSession).filter(models.ChatSession.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Chat session not found")
+    db.query(models.ChatMessage).filter(models.ChatMessage.session_id == session_id).delete()
+    db.query(models.Notification).filter(models.Notification.ticket_id == session_id).delete()
+    db.delete(session)
+    db.commit()
+    return {"deleted": session_id}
 
 
 @router.post("/chat/sessions/{session_id}/agent-messages", response_model=schemas.ChatMessageResponse)
@@ -381,6 +487,7 @@ async def post_agent_message(
     if not session.agent_username:
         session.agent_username = current_user.username
         session.status = "active"
+    session.unread_count = 0
 
     content = (body.content or "").strip()
     if not content:

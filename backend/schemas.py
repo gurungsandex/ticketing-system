@@ -217,6 +217,8 @@ class ChatSessionResponse(BaseModel):
     status:         str
     agent_username: Optional[str] = None
     subject:        Optional[str] = None
+    escalated:      bool = False
+    unread_count:   int = 0
     created_at:     Optional[datetime] = None
     closed_at:      Optional[datetime] = None
     last_activity:  Optional[datetime] = None
@@ -226,6 +228,28 @@ class ChatSessionResponse(BaseModel):
 class ChatAvailability(BaseModel):
     live_support_available: bool
     available_agents: int
+
+
+# ── Branding ──────────────────────────────────────────
+
+class BrandingResponse(BaseModel):
+    logo_configured: bool
+
+
+# ── Desktop client versioning ─────────────────────────
+
+class ClientVersionResponse(BaseModel):
+    latest_version: str
+    download_url:   Optional[str] = None
+    release_notes:  Optional[str] = None
+    mandatory:      bool = False
+
+
+class ClientVersionUpdate(BaseModel):
+    latest_version: str
+    download_url:   str
+    release_notes:  Optional[str] = ""
+    mandatory:      bool = False
 
 
 # ── Knowledge base ────────────────────────────────────

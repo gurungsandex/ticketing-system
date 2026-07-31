@@ -29,6 +29,10 @@ client_app/dist/
 client_app/build/
 *.spec.bak
 
+# ── Uploaded branding assets (server-local, not source) ──
+backend/static/branding/*
+!backend/static/branding/.gitkeep
+
 # ── Logs & runtime generated files ───────────────────
 logs/
 stop_server.sh

@@ -30,6 +30,10 @@ _ADDITIVE_COLUMNS = {
         "chat_status": "TEXT DEFAULT 'offline'",
         "chat_status_updated": "DATETIME",
     },
+    "chat_sessions": {
+        "escalated": "BOOLEAN DEFAULT 0",
+        "unread_count": "INTEGER DEFAULT 0",
+    },
 }
 
 

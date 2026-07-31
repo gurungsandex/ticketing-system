@@ -114,6 +114,8 @@ class ChatSession(Base):
     status         = Column(Text, default="waiting", index=True)  # waiting | active | closed
     agent_username = Column(Text, index=True)
     subject        = Column(Text)
+    escalated      = Column(Boolean, default=False)   # handed from front-line techs to admins
+    unread_count   = Column(Integer, default=0)       # unread user messages since agent last read/replied
     created_at     = Column(DateTime, default=func.now(), index=True)
     closed_at      = Column(DateTime)
     last_activity  = Column(DateTime, default=func.now())
@@ -128,6 +130,16 @@ class ChatMessage(Base):
     sender_name   = Column(Text)
     content       = Column(Text, nullable=False)
     created_at    = Column(DateTime, default=func.now())
+
+
+# ── App settings (branding logo, desktop client version) ──
+
+class AppSetting(Base):
+    """Simple key/value store for admin-configurable, non-per-user settings."""
+    __tablename__ = "app_settings"
+
+    key   = Column(Text, primary_key=True)
+    value = Column(Text)
 
 
 # ── Knowledge base ────────────────────────────────────
