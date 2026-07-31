@@ -90,6 +90,17 @@ Click the bell to open the notification panel. Click a notification to navigate 
 
 ---
 
+## Live Chat — You're the Front Line
+
+New live chats route to available technicians first, before admins ever see them. Set your presence in the top strip:
+- **Available** — you'll be pinged instantly for new chats and every reply.
+- **Busy** — routine replies won't ping you, but you'll still get notified every 5 unread messages so nothing sits too long.
+- **Away / Offline** — no chat notifications; messages wait for you with an unread badge.
+
+To handle a chat: open **Live Chat**, click a conversation, **Claim** it, and reply — canned response buttons above the reply box (click **+ Template** to add your own) can speed up common answers. If something needs admin-level access or a decision, click **↑ Escalate to Admin** — it moves the session out of your queue into theirs. Use **End Chat** when the conversation is done.
+
+---
+
 ## Support
 
 If you have trouble accessing the portal, contact your system administrator and check:

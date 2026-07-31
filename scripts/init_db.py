@@ -196,6 +196,30 @@ try:
         else:
             print(f"  [=] Ticket already exists: {t['id']} — skipped")
 
+    # ── Canned responses (Live Chat one-click templates) ──
+    sample_canned = [
+        ("Ask for more details", "Thanks for reaching out! Could you share your device hostname and a brief description of when this issue started?"),
+        ("Troubleshooting in progress", "I'm looking into this now — I'll follow up shortly with next steps or a resolution."),
+        ("Resolved — please confirm", "This should now be resolved on our end. Could you confirm everything is working as expected on your side?"),
+        ("Password reset steps", "I've reset your password. Please log out completely and back in using the temporary password — you'll be prompted to set a new one immediately."),
+        ("Waiting on user", "Just checking in — are you still experiencing this issue, or has it been resolved? Let us know if you need anything else."),
+        ("Escalation notice", "I'm escalating this to our admin team for further investigation. They'll follow up with you directly — thanks for your patience."),
+        ("Please try restarting", "Could you try restarting your device and let me know if the issue persists? This resolves a surprising number of cases."),
+        ("Remote session request", "Would it be alright if I connected remotely to take a closer look? I'll walk you through granting access when you're ready."),
+    ]
+    for title, body in sample_canned:
+        existing = db.query(models.CannedResponse).filter(
+            models.CannedResponse.title == title
+        ).first()
+        if not existing:
+            db.add(models.CannedResponse(
+                title=title, body=body, created_by="admin", is_shared=True,
+            ))
+            db.commit()
+            print(f"  [+] Created canned response: {title}")
+        else:
+            print(f"  [=] Canned response already exists: {title} — skipped")
+
     print()
     print("  ✓ Seed complete.")
     print()

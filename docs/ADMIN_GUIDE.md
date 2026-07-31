@@ -283,7 +283,62 @@ The system includes a built-in update mechanism using GitHub Releases.
 
 ---
 
-## Part 12 — Building the Desktop Client App
+## Part 12 — Live Chat & Front-Line Routing
+
+Live chat lets end-users talk to IT staff in real time from the desktop client. **Technicians are the front line**: new chats page available technicians first, before admins ever see them. Admins only see a chat once it's escalated (or as a one-time fallback if literally no technician is online when a chat starts).
+
+### Setting your status
+
+Use the presence dropdown in the top strip (Offline / Available / Busy / Away):
+- **Available** — you receive every new/unclaimed chat and every reply, instantly.
+- **Busy** — routine replies won't ping you, but you'll still get notified every 5 unread messages so nothing important gets buried while you're heads-down.
+- **Away / Offline** — no chat notifications at all. Messages are still saved; you'll see them (with an unread badge) whenever you reopen Live Chat.
+
+### Claiming, replying, escalating, closing
+
+1. Open **Live Chat**, click a conversation to view the thread.
+2. **Claim** assigns it to you.
+3. **Escalate to Admin** (technician view) hands the session to the admin queue — use this when it needs admin-level access or a decision only an admin can make.
+4. **End Chat** closes the session (it stays in history).
+5. Admins can additionally **Delete** a session, which permanently removes it and its messages — use for spam/test sessions, not routine closing.
+
+### Canned responses
+
+The **+ Template** button above the reply box lets any staff member add a reusable reply; templates marked shared appear for everyone. They're inserted into the reply box for review — never sent automatically.
+
+### If nobody is online
+
+End-users can still start a chat and send a message even when no one is available — the desktop client tells them so up front and the message waits in the session for whoever comes online next.
+
+---
+
+## Part 13 — Branding (Custom Logo)
+
+By default, the app uses a 🎫 emoji as its icon everywhere. To replace it with your organization's logo:
+
+1. Log in as `super_admin` → **Updates** tab → **Branding** section.
+2. Choose a PNG or JPEG file (max 2MB) and click **Upload Logo**.
+3. It immediately replaces the icon in the login screen and sidebar of both the admin and technician panels.
+4. The desktop client picks it up the next time it's launched (fetched once at startup for both the in-app header and the system tray icon).
+5. Click **Remove Logo** to revert to the default icon everywhere.
+
+---
+
+## Part 14 — Pushing Desktop Client Updates
+
+The panels you use in the browser are always current — there's nothing to "push" for them beyond the server update in Part 11. The **desktop client app**, however, is a separately built executable installed on end-user machines, so it needs its own update flow:
+
+1. Build the new client executable (see Part 15) and make it available for download somewhere reachable by end-users (a GitHub release asset, an internal file share, etc.) — you need a direct URL to the file.
+2. Bump `CLIENT_VERSION` in `client_app/config.py` to match before rebuilding, so the next check correctly reports "up to date."
+3. Log in as `super_admin` → **Updates** tab → **Push a Desktop Client Update**.
+4. Fill in the new version number, the direct download URL, and release notes for end-users. Check **Mandatory** if you want the prompt to be undismissable.
+5. Click **Push Version**. Every desktop client checks this on startup (and once every 24 hours while running) and, if it's behind, shows an "Update Available" dialog with your notes and an **Update Now** button that opens the download link in the user's browser.
+
+The client does not self-replace its own executable — it hands the user a direct download link, which is the safer default for a distributed desktop app.
+
+---
+
+## Part 15 — Building the Desktop Client App
 
 The client app is a PySide6 system tray application for end-users to submit tickets.
 

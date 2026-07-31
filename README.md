@@ -28,8 +28,10 @@ Built with **FastAPI** + **SQLite**. Ships with a browser-based admin dashboard,
 | **Prioritisation** | Low / Normal / High / Urgent with filtering and priority-aware alerts |
 | **Duplicate-proof Numbering** | Atomic per-day counter — safe under simultaneous submissions |
 | **Role-Based Access** | `super_admin` and `technician` roles with separate portals |
-| **Live Chat** | Secure end-user ↔ staff chat with agent presence and response templates |
+| **Live Chat** | Technician-first routing with admin escalation, presence-aware notifications, canned responses, always-reachable offline messaging |
 | **Knowledge Base** | Mines resolved tickets, generates review-only draft articles/playbooks |
+| **Custom Branding** | Upload a PNG/JPEG logo to replace the default icon across both dashboards and the desktop client |
+| **Desktop Client Updates** | Push a new client version + download link from the admin panel; the desktop app checks on startup and prompts end-users |
 | **Real-Time Notifications** | WebSocket bell for staff; polling for desktop client |
 | **Admin Dashboard** | Tickets, filters, users, notes, chat, knowledge base — served at `/admin` |
 | **Technician Portal** | Assigned tickets + live chat — served at `/tech` |
@@ -76,11 +78,13 @@ ticketing-system/
 │   │   ├── tickets.py         ← Ticket CRUD, atomic numbering, priority, attachments
 │   │   ├── admin.py           ← User management (super_admin only)
 │   │   ├── notifications.py   ← Bell API + WebSocket + client polling
-│   │   ├── chat.py            ← Live chat, agent presence, canned responses
+│   │   ├── chat.py            ← Live chat, agent presence, canned responses, escalation
 │   │   ├── knowledge.py       ← KB analytics, draft generation, approval workflow
-│   │   └── update.py          ← Optional GitHub Releases auto-update
-│   └── services/
-│       └── kb_analysis.py     ← Ticket-history mining + draft assembly
+│   │   ├── settings.py        ← Branding logo upload + desktop client version push
+│   │   └── update.py          ← Optional GitHub Releases auto-update (server)
+│   ├── services/
+│   │   └── kb_analysis.py     ← Ticket-history mining + draft assembly
+│   └── static/branding/       ← Uploaded logo lives here (gitignored)
 ├── admin_panel/
 │   └── index.html             ← Admin dashboard (served at /admin)
 ├── tech_panel/
@@ -322,9 +326,23 @@ See [docs/SECURITY_ANALYSIS.md](docs/SECURITY_ANALYSIS.md) for a full security r
 ## Live Chat & Knowledge Base
 
 **Live chat** — Staff set their availability (Available / Busy / Away / Offline) from the
-top bar. When an agent is Available, end users see a **Live Chat with IT** button in the
-desktop client. Agents work a queue: claim a conversation, reply, and insert reusable
-**response templates** (inserted into the editor for review — never auto-sent).
+top bar. The **"Live Chat with IT"** button in the desktop client is always available:
+if an agent is online you're connected right away, and if not, the client tells you so and
+lets you leave a message anyway — it's saved and answered as soon as someone's back online.
+**Technicians are the front line**: new chats page available technicians first, and a
+technician can **escalate** a conversation to the admin queue when it needs admin-level
+access or a decision. Notifications are presence-aware — a `busy` agent isn't pinged for
+every message, just every 5th, and `away`/`offline` agents aren't paged at all until they're
+back. Agents work a queue: claim a conversation, reply, and insert reusable **canned
+responses** (inserted into the editor for review — never auto-sent). Admins can permanently
+delete a session from history when needed.
+
+**Branding** — a super_admin can upload a PNG/JPEG logo (Updates tab → Branding) that
+replaces the default icon across both dashboards and the desktop client.
+
+**Desktop client updates** — a super_admin can push a new client version + download link +
+release notes from the Updates tab; every desktop client checks on startup and shows an
+update prompt with a direct download link (optionally marked mandatory).
 
 **Knowledge base** — The system analyses resolved-ticket history to surface frequent
 problems, common resolutions, repeated troubleshooting steps, and the devices/departments/

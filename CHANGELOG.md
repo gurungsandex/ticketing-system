@@ -27,6 +27,30 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 - pytest test suite (`tests/`) covering ticket numbering + concurrency, RBAC,
   security headers, magic-byte upload validation, chat, and the KB approval flow.
 
+### Added — Technician-first routing, branding, client updates (1.2)
+- **Technician-first chat routing**: new/unclaimed chats page available
+  technicians first instead of admins, falling back to admins only if no
+  technician is online. Technicians can **escalate** a session to the admin
+  queue; escalated sessions drop out of the technician's default view.
+- **Presence-aware notification gating**: an `available` agent is notified on
+  every message; a `busy` agent only every 5th unread message; `away`/`offline`
+  agents get none until they return (unread badge shows what they missed).
+- **Chat session deletion** (`super_admin` only) — permanently removes a
+  session, its messages, and related notifications.
+- **Always-reachable live chat**: the desktop client's chat button no longer
+  blocks when nobody's online — it opens the chat and tells the user their
+  message will be answered once an agent's back, instead of refusing to start
+  a conversation.
+- **Custom branding**: `super_admin` can upload a PNG/JPEG logo (magic-byte
+  validated, 2MB cap) that replaces the default 🎫 icon across both dashboards
+  and the desktop client (login screen, sidebar, tray icon, header).
+- **Desktop client version push**: `super_admin` publishes a version/URL/notes
+  from the Updates tab; the client checks on launch (and daily) and shows an
+  update dialog with a direct download link, optionally marked mandatory.
+- 8 seeded canned responses (was 0) and new tests covering technician-first
+  routing, escalation visibility, the busy-agent threshold, and delete
+  authorization.
+
 ### Fixed
 - **Duplicate ticket numbers under concurrency**: replaced the racy `count()+1`
   scheme with an atomic per-day counter (`UPDATE last_seq + 1`) plus retry on

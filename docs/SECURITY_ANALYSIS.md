@@ -121,6 +121,8 @@ CORS_ORIGINS=http://192.168.1.50:8000
 - [ ] Server firewall restricts port 8000 to the internal subnet only
 - [ ] If externally accessible: HTTPS reverse proxy is configured
 - [ ] `.env` is not committed to version control
+- [ ] Default demo canned responses/branding reviewed before go-live
+- [ ] `client_latest_version` pushed to match the actual client build before wide distribution
 
 ---
 
@@ -159,3 +161,38 @@ The following controls were added in 1.1 and change several of the statuses abov
 - Terminate TLS at a reverse proxy (nginx/Caddy) and set `CORS_ORIGINS`.
 - Consider a structured audit log and short-lived tokens with refresh if you need
   session revocation.
+
+---
+
+## Version 1.2 — Technician-First Routing, Branding, Client Versioning
+
+- **Chat escalation is any-staff, deletion is `super_admin`-only** — `POST
+  /chat/sessions/{id}/escalate` requires only a valid staff JWT (either role can
+  hand a chat to the admin queue), while `DELETE /chat/sessions/{id}` explicitly
+  checks `current_user.role == "super_admin"` and hard-deletes the session, its
+  messages, and its `Notification` rows.
+- **Notification routing is presence- and role-aware** — new/unclaimed chats page
+  available technicians first (falling back to all admins only if literally no
+  technician is online, so nothing is silently dropped); once claimed, the
+  assigned agent is notified immediately if `available`, throttled to every 5th
+  unread message if `busy` (`BUSY_NOTIFY_EVERY` in `chat.py`), and never notified
+  while `away`/`offline`. The `unread_count` counter that drives this can only be
+  cleared by the session's own assigned agent (`get_chat_messages`,
+  `post_agent_message`, `claim_chat_session`) — an unrelated staff member merely
+  viewing a thread cannot silently suppress another agent's notifications.
+- **Branding logo upload validates real file content, not just the declared
+  MIME type** — `POST /settings/logo` (`super_admin` only) re-derives the type
+  from magic bytes via `security.detect_content_type()` (the same helper used
+  for ticket attachments), caps the upload at 2MB, and always writes to a fixed
+  filename (`logo.png`/`logo.jpg`) derived from the verified type — the
+  client-supplied filename is never used for the on-disk path, ruling out path
+  traversal via a crafted filename.
+- **`GET /branding/logo` and `GET /client/version` are intentionally public** —
+  they expose only a logo image and non-sensitive version/URL metadata, mirroring
+  the existing public `GET /chat/availability` pattern; both are backed by a new
+  generic `AppSetting` key/value table, not per-user data.
+- **Known limitation carried forward**: canned-response create/delete
+  (`POST`/`DELETE /canned-responses`) remains available to any authenticated
+  staff member, not just `super_admin` — acceptable for an internal tool where
+  all staff are trusted, but worth tightening if templates should be
+  admin-curated only.

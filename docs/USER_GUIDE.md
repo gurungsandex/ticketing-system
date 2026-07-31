@@ -70,6 +70,15 @@ If you see a notification, click the tray icon to view the update.
 
 ---
 
+## Need to Talk to Someone Now? — Live Chat
+
+The app has a **"💬 Live Chat with IT"** button. It always works, but what happens next depends on whether IT staff are online:
+
+- **Someone's available:** you're connected right away and messages arrive in real time.
+- **Nobody's online:** the app tells you so up front ("Our team is offline right now — leave a message and we'll reply as soon as someone's back online"). Go ahead and send your message anyway — it's saved, and the first available technician will see it and reply as soon as they're back online. You don't need to keep the chat window open; check back later.
+
+---
+
 ## Frequently Asked Questions
 
 **Q: I submitted a ticket but haven't heard back — what do I do?**  
