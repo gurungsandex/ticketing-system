@@ -8,16 +8,15 @@ One-time setup:
 4. "Apply Update" in the admin dashboard runs git pull and restarts.
 """
 import os
-import sys
 import subprocess
+import sys
 import threading
 from datetime import datetime
 
-import requests as http_requests
-from fastapi import APIRouter, Depends, HTTPException
-
 import models
+import requests as http_requests
 from auth import require_super_admin
+from fastapi import APIRouter, Depends, HTTPException
 
 router = APIRouter()
 
@@ -25,7 +24,7 @@ router = APIRouter()
 GITHUB_REPO = "YOUR_ORG/YOUR_REPO"
 # Example: GITHUB_REPO = "your-org/ticketing-system"
 
-CURRENT_VERSION = "1.0.0"
+CURRENT_VERSION = "1.1.0"
 # ─────────────────────────────────────────────────────
 
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

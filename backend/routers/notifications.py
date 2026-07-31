@@ -1,13 +1,11 @@
-from datetime import datetime, timedelta
 from typing import List
-
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, Query
-from sqlalchemy.orm import Session
 
 import models
 import schemas
+from auth import decode_token, get_current_admin
 from database import get_db
-from auth import get_current_admin, decode_token
+from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
+from sqlalchemy.orm import Session
 from websocket_manager import ws_manager
 
 router = APIRouter()
@@ -133,6 +131,9 @@ def get_client_notifications(client_id: str, db: Session = Depends(get_db)):
         .all()
     )
     return [
-        schemas.NotificationItem(id=t.id, status=t.status, updated_at=t.updated_at)
+        schemas.NotificationItem(
+            id=t.id, status=t.status, category=t.category,
+            priority=t.priority or "normal", updated_at=t.updated_at,
+        )
         for t in tickets
     ]

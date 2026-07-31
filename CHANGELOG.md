@@ -8,16 +8,52 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 
 ## [Unreleased]
 
-### Fixed
-- Version mismatch: `CURRENT_VERSION` in `backend/routers/update.py` now correctly reports `1.0.0`
-- Removed unused variable assignment (`n = _create_notification(...)`) in `tickets.py` that would fail CI lint
-- Startup message now respects `HOST` and `PORT` environment variables from `.env`
-- Updated auto-update router example comment to use a generic placeholder instead of old project-specific reference
+### Added — Enterprise readiness (1.1)
+- **Live chat**: secure end-user ↔ staff chat with agent presence
+  (Available / Busy / Away / Offline), a staff queue with claim, and reusable
+  response templates that are *inserted* into the reply editor for review rather
+  than auto-sent. End users get a clear "Live Chat with IT" button in the
+  desktop client (shown when an agent is available).
+- **Knowledge management**: analysis of ticket history (frequent problems,
+  common resolutions, repeated troubleshooting steps, common devices/
+  departments/locations, and KB-article candidates), plus one-click AI-assisted
+  **draft** generation. Generated content is always saved as a draft and must be
+  approved by a super_admin — nothing is ever auto-published.
+- **Ticket prioritisation**: `priority` (low/normal/high/urgent) with column,
+  filter, per-ticket control, and priority-aware notifications; resolution
+  summary captured on resolve.
+- New endpoints: `/agent/*`, `/canned-responses`, `/chat/*`, `/kb/*`,
+  `/tickets/{id}/priority`.
+- pytest test suite (`tests/`) covering ticket numbering + concurrency, RBAC,
+  security headers, magic-byte upload validation, chat, and the KB approval flow.
 
-### Added
-- `pyproject.toml` with ruff linter configuration (100-char line length matching `.editorconfig`)
-- CI workflow now passes `--config pyproject.toml` to ruff for consistent lint behaviour
-- Bumped `actions/checkout` v4 → v6 and `actions/setup-python` v5 → v6 in CI workflow
+### Fixed
+- **Duplicate ticket numbers under concurrency**: replaced the racy `count()+1`
+  scheme with an atomic per-day counter (`UPDATE last_seq + 1`) plus retry on
+  contention. Verified by a 40-way concurrent-creation test.
+- **Desktop client reliability** ("disappears / loses connection"): login
+  autostart is now re-registered on every launch (self-healing) with a quoted
+  executable path; macOS LaunchAgent uses `KeepAlive`; a single-instance guard
+  prevents duplicates; when no system tray is available the window minimises
+  instead of vanishing; and the server URL is configurable at runtime
+  (`HELPDESK_SERVER_URL` / Settings dialog) so an IP change no longer bricks
+  deployed clients. Added a live connection indicator.
+- SQLite now runs in WAL mode with a busy timeout and foreign keys enforced,
+  removing "database is locked" errors under concurrent use.
+- Replaced deprecated `datetime.utcnow()` with a timezone-safe helper.
+
+### Security
+- `SECRET_KEY` no longer falls back to a predictable static default; when unset
+  it is auto-generated and persisted to a gitignored `secret.key`.
+- Security headers (CSP, X-Frame-Options, X-Content-Type-Options, Referrer-
+  Policy, Permissions-Policy) added to every response.
+- CORS no longer combines a wildcard origin with credentials.
+- In-memory rate limiting on the public ticket/attachment/chat endpoints and on
+  login (brute-force protection).
+- Attachment uploads validated by magic bytes, not just the client-declared
+  content type.
+- Idempotent startup migrations add new columns to existing databases without
+  data loss.
 
 ---
 

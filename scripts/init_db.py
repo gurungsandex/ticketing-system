@@ -15,7 +15,6 @@ CAUTION: Running on an existing database will skip creation of any records
 that conflict with unique constraints, but will not delete existing data.
 """
 import sys
-import os
 from pathlib import Path
 
 # Ensure the backend directory is on the path

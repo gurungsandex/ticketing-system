@@ -7,6 +7,7 @@ class NotifierWorker(QObject):
     ticket_resolved    = Signal(str)   # ticket_id
     ticket_in_progress = Signal(str)   # ticket_id
     queue_size_changed = Signal(int)
+    connection_changed = Signal(bool)  # True = server reachable
 
     def __init__(self, client_id: str, poll_interval_ms: int, queue_retry_ms: int):
         super().__init__()
@@ -14,6 +15,7 @@ class NotifierWorker(QObject):
         self._poll_interval_ms = poll_interval_ms
         self._queue_retry_ms = queue_retry_ms
         self._last_known: dict = {}   # ticket_id -> status string
+        self._last_connected = None
         self._poll_timer: QTimer = None
         self._queue_timer: QTimer = None
 
@@ -32,7 +34,14 @@ class NotifierWorker(QObject):
         self._poll()
         self._flush_queue()
 
+    def _emit_connection(self, connected: bool):
+        if connected != self._last_connected:
+            self._last_connected = connected
+            self.connection_changed.emit(connected)
+
     def _poll(self):
+        connected = api_client.check_connection()
+        self._emit_connection(connected)
         notifications = api_client.get_notifications(self._client_id)
         for item in notifications:
             ticket_id  = item.get("id")
@@ -40,10 +49,8 @@ class NotifierWorker(QObject):
             old_status = self._last_known.get(ticket_id)
 
             if old_status is not None and old_status != new_status:
-                # Notify when ticket moves TO in_progress
                 if new_status == "in_progress":
                     self.ticket_in_progress.emit(ticket_id)
-                # Notify when ticket moves TO resolved
                 elif new_status == "resolved":
                     self.ticket_resolved.emit(ticket_id)
 
@@ -72,6 +79,10 @@ class Notifier:
     @property
     def queue_size_changed(self):
         return self._worker.queue_size_changed
+
+    @property
+    def connection_changed(self):
+        return self._worker.connection_changed
 
     def start(self):
         self._thread.start()

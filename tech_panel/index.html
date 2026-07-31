@@ -231,6 +231,70 @@ textarea.note-inp:focus{border-color:var(--blue)}
   border-radius:8px;margin-bottom:5px;font-size:12px}
 .attach-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px}
 .pw-stack{display:flex;flex-direction:column;gap:7px}
+
+/* ── Nav buttons (page switcher) ────────────────────── */
+.nav-btn{cursor:pointer}
+.nav-btn:not(.active){background:transparent;color:rgba(255,255,255,.75);font-weight:500}
+.nav-btn:not(.active):hover{background:rgba(255,255,255,.12);color:#fff}
+.nav-count{background:var(--red);color:#fff;font-size:10px;font-weight:800;
+  min-width:16px;height:16px;border-radius:9px;display:inline-flex;
+  align-items:center;justify-content:center;padding:0 4px;margin-left:auto}
+
+/* ── Priority badges ────────────────────────────────── */
+.pri{display:inline-block;padding:2px 8px;border-radius:6px;font-size:10px;
+  font-weight:800;text-transform:uppercase;letter-spacing:.4px}
+.pri-urgent{background:#FEE2E2;color:#B91C1C}
+.pri-high{background:#FFEDD5;color:#C2410C}
+.pri-normal{background:#F1F5F9;color:#475569}
+.pri-low{background:#F0FDF4;color:#15803D}
+
+/* ── Agent status selector ──────────────────────────── */
+.agent-status-wrap{display:flex;align-items:center;gap:6px}
+.agent-status-dot{width:9px;height:9px;border-radius:50%;background:#9CA3AF}
+.agent-status-dot.available{background:var(--green)}
+.agent-status-dot.busy{background:var(--red)}
+.agent-status-dot.away{background:var(--amber)}
+.agent-status-dot.offline{background:#9CA3AF}
+.agent-status-sel{padding:4px 8px;border:1px solid var(--border);border-radius:8px;
+  background:#fff;font-size:12px;height:30px}
+
+/* ── Live chat page ─────────────────────────────────── */
+.chat-layout{display:grid;grid-template-columns:280px 1fr;gap:14px;height:calc(100vh - 130px)}
+.chat-sessions{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow-y:auto}
+.chat-sess-hdr{padding:12px 14px;border-bottom:1px solid var(--border);font-weight:700;
+  font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);
+  position:sticky;top:0;background:var(--card)}
+.chat-sess-item{padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer}
+.chat-sess-item:hover{background:var(--page)}
+.chat-sess-item.active{background:var(--blue-lt);border-left:3px solid var(--blue)}
+.chat-sess-name{font-weight:700;font-size:13px}
+.chat-sess-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.chat-sess-badge{display:inline-block;font-size:9px;font-weight:800;padding:1px 6px;
+  border-radius:10px;text-transform:uppercase}
+.csb-waiting{background:#FFFBEB;color:#B45309}
+.csb-active{background:#ECFDF5;color:#065F46}
+.bold{font-weight:700}
+.chat-main{background:var(--card);border:1px solid var(--border);border-radius:12px;
+  display:flex;flex-direction:column;overflow:hidden}
+.chat-main-hdr{padding:12px 16px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;gap:10px}
+.chat-thread{flex:1;overflow-y:auto;padding:16px;background:var(--page);display:flex;
+  flex-direction:column;gap:8px}
+.cbub{max-width:70%;padding:8px 12px;border-radius:12px;font-size:13px;line-height:1.4;
+  white-space:pre-wrap;word-break:break-word}
+.cbub-user{align-self:flex-start;background:#fff;border:1px solid var(--border)}
+.cbub-agent{align-self:flex-end;background:var(--blue);color:#fff}
+.cbub-system{align-self:center;background:transparent;color:var(--muted);font-size:11px;font-style:italic}
+.cbub-name{font-size:10px;color:var(--muted);margin-bottom:2px}
+.chat-input-row{border-top:1px solid var(--border);padding:10px 12px}
+.chat-input-tools{display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap}
+.chat-input-send{display:flex;gap:8px}
+.chat-input-send textarea{flex:1;border:1px solid var(--border);border-radius:8px;
+  padding:8px 10px;resize:none;min-height:44px;font-size:13px;outline:none}
+.chat-input-send textarea:focus{border-color:var(--blue)}
+.chat-empty{flex:1;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:14px}
+.btn-danger{background:#FEF2F2;color:var(--red);border:1px solid #FECACA}
+.btn-danger:hover{background:#FEE2E2}
 </style>
 </head>
 <body>
@@ -273,9 +337,13 @@ textarea.note-inp:focus{border-color:var(--blue)}
     </div>
     <nav class="sb-nav">
       <div class="sb-section-lbl">Menu</div>
-      <div class="sb-item">
+      <button class="sb-item nav-btn active" id="navTkts" onclick="showPage('tickets')">
         <span class="nav-icon">🎫</span> Tickets
-      </div>
+      </button>
+      <button class="sb-item nav-btn" id="navChat" onclick="showPage('chat')">
+        <span class="nav-icon">💬</span> Live Chat
+        <span class="nav-count hidden" id="chatWaitingBadge">0</span>
+      </button>
     </nav>
     <div class="sb-bottom">
       <span class="role-pill">TECHNICIAN</span>
@@ -291,6 +359,17 @@ textarea.note-inp:focus{border-color:var(--blue)}
         <span class="last-upd-txt">Last updated: <span id="lastUpd">—</span></span>
       </div>
       <div class="ts-right">
+        <!-- Agent presence -->
+        <div class="agent-status-wrap" title="Your live-chat availability">
+          <span class="agent-status-dot" id="agentDot"></span>
+          <select id="agentStatusSel" class="agent-status-sel" onchange="setAgentStatus()">
+            <option value="offline">Offline</option>
+            <option value="available">Available</option>
+            <option value="busy">Busy</option>
+            <option value="away">Away</option>
+          </select>
+        </div>
+        <div class="ts-divider"></div>
         <!-- Notification Bell -->
         <div class="notif-wrap" id="notifWrap">
           <button class="notif-bell-btn" onclick="toggleNotifPanel(event)" title="Notifications">
@@ -317,7 +396,7 @@ textarea.note-inp:focus{border-color:var(--blue)}
     </div>
 
     <!-- Page content -->
-    <div class="page">
+    <div class="page" id="pgTickets">
       <!-- Summary cards -->
       <div class="summary-bar">
         <div class="summ-card">
@@ -367,15 +446,48 @@ textarea.note-inp:focus{border-color:var(--blue)}
         <div class="tbl-wrap">
           <table>
             <thead><tr>
-              <th>Ticket ID</th><th>User</th><th>Hostname</th>
+              <th>Ticket ID</th><th>Priority</th><th>User</th><th>Hostname</th>
               <th>Category</th><th>Status</th><th>Created</th><th></th>
             </tr></thead>
-            <tbody id="tBody"><tr class="empty-row"><td colspan="7">Loading…</td></tr></tbody>
+            <tbody id="tBody"><tr class="empty-row"><td colspan="8">Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="pagination">
           <div class="pg-info" id="pgInfo">—</div>
           <div class="pg-btns" id="pgBtns"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── LIVE CHAT PAGE ── -->
+    <div id="pgChat" class="page hidden">
+      <div class="chat-layout">
+        <div class="chat-sessions">
+          <div class="chat-sess-hdr">Conversations</div>
+          <div id="chatSessList"><div class="notif-empty">Loading…</div></div>
+        </div>
+        <div class="chat-main" id="chatMain">
+          <div class="chat-empty" id="chatEmpty">Select a conversation to begin.</div>
+          <div id="chatActive" class="hidden" style="display:flex;flex-direction:column;flex:1;min-height:0">
+            <div class="chat-main-hdr">
+              <div>
+                <div class="bold" id="chatPeer">—</div>
+                <div class="sm muted" id="chatPeerMeta"></div>
+              </div>
+              <div style="display:flex;gap:6px">
+                <button class="btn btn-ghost btn-sm" id="chatClaimBtn" onclick="claimChat()">Claim</button>
+                <button class="btn btn-danger btn-sm" onclick="closeChatStaff()">End Chat</button>
+              </div>
+            </div>
+            <div class="chat-thread" id="chatThread"></div>
+            <div class="chat-input-row">
+              <div class="chat-input-tools" id="cannedTools"></div>
+              <div class="chat-input-send">
+                <textarea id="chatReply" placeholder="Type a reply…  (Enter to send, Shift+Enter for newline)"></textarea>
+                <button class="btn btn-blue" onclick="sendChatReply()">Send</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -408,12 +520,23 @@ textarea.note-inp:focus{border-color:var(--blue)}
    </div>
    <div class="modal-right">
      <div class="ablock">
+       <div class="ablock-title">Priority</div>
+       <select class="finp w100" id="prioritySel" onchange="doPriority()">
+         <option value="low">Low</option>
+         <option value="normal">Normal</option>
+         <option value="high">High</option>
+         <option value="urgent">Urgent</option>
+       </select>
+       <div id="priorityMsg" class="hidden"></div>
+     </div>
+     <div class="ablock">
        <div class="ablock-title">Update Status</div>
        <select class="finp w100" id="statusSel" onchange="colorSel()">
          <option value="active">Active</option>
          <option value="in_progress">In Progress</option>
          <option value="resolved">Resolved</option>
        </select>
+       <textarea class="note-inp mt2 hidden" id="resolutionInput" placeholder="Resolution summary (recommended when resolving)…"></textarea>
        <button class="btn btn-blue btn-sm w100 mt2" onclick="doStatus()">Save Status</button>
        <div id="statusMsg" class="hidden"></div>
      </div>
@@ -557,9 +680,20 @@ function doLogout(){
 
 function initDashboard(){
   hide("loginScreen");show("dash");
-  loadTickets();
-  timer=setInterval(loadTickets,30000);
+  showPage('tickets');
+  timer=setInterval(()=>{ if(!$("pgTickets").classList.contains("hidden")) loadTickets(); },30000);
   initNotifications();
+  initAgentStatus();
+  pollChatWaiting();
+  if(chatWaitTimer) clearInterval(chatWaitTimer);
+  chatWaitTimer=setInterval(pollChatWaiting, 15000);
+}
+
+function showPage(p){
+  ["pgTickets","pgChat"].forEach(id=>hide(id));
+  ["navTkts","navChat"].forEach(id=>$(id)&&$(id).classList.remove("active"));
+  if(p==="tickets"){show("pgTickets");$("navTkts").classList.add("active");loadTickets();}
+  if(p==="chat"){show("pgChat");$("navChat").classList.add("active");loadChatSessions();}
 }
 
 window.addEventListener("load",()=>{if(S.token)initDashboard();});
@@ -575,7 +709,7 @@ async function loadTickets(){
     updateCounts();
     applyFilter();
     $("lastUpd").textContent=new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",second:"2-digit"});
-  }catch(e){$("tBody").innerHTML=`<tr class="empty-row"><td colspan="7">Error: ${esc(e.message)}</td></tr>`;}
+  }catch(e){$("tBody").innerHTML=`<tr class="empty-row"><td colspan="8">Error: ${esc(e.message)}</td></tr>`;}
 }
 
 function updateCounts(){
@@ -601,7 +735,7 @@ function resetFilter(){$("fStatus").value="";$("fCat").value="";applyFilter();}
 function renderTable(){
   const tb=$("tBody");
   if(!filtered.length){
-    tb.innerHTML=`<tr class="empty-row"><td colspan="7">No assigned tickets match the current filter.</td></tr>`;
+    tb.innerHTML=`<tr class="empty-row"><td colspan="8">No assigned tickets match the current filter.</td></tr>`;
     $("pgInfo").textContent="No tickets";$("pgBtns").innerHTML="";return;
   }
   const total=filtered.length, pages=Math.ceil(total/pageSize);
@@ -610,6 +744,7 @@ function renderTable(){
   tb.innerHTML=filtered.slice(s,e).map(t=>`
     <tr onclick="openModal('${esc(t.id)}')">
       <td><code style="font-size:11px;font-weight:700">${esc(t.id)}</code></td>
+      <td>${priBadge(t.priority)}</td>
       <td>${esc(t.username||"—")}</td>
       <td>${esc(t.hostname||"—")}</td>
       <td>${esc(t.category)}</td>
@@ -652,6 +787,7 @@ async function loadDetail(id){
     $("mGrid").innerHTML=[
       ["Ticket ID",`<code style="font-weight:700">${esc(t.id)}</code>`],
       ["Status",badge(t.status)],
+      ["Priority",priBadge(t.priority)],
       ["User",esc(t.username||"—")],
       ["Hostname",esc(t.hostname||"—")],
       ["IP",esc(t.ip_address||"—")],
@@ -659,8 +795,10 @@ async function loadDetail(id){
       ["Sub-Cat",esc(t.sub_category||"—")],
       ["Description",t.description?`<span style="white-space:pre-wrap">${esc(t.description)}</span>`:`<span class="muted">—</span>`],
       ["Created",fmt(t.created_at)],["Updated",fmt(t.updated_at)],
+      ...(t.resolution_summary?[["Resolution",`<span style="white-space:pre-wrap">${esc(t.resolution_summary)}</span>`]]:[]),
     ].map(([k,v])=>`<div class="dk">${k}</div><div class="dv">${v}</div>`).join("");
     $("statusSel").value=t.status;colorSel();
+    $("prioritySel").value=t.priority||"normal";
   }catch(e){$("mGrid").innerHTML=`<div style="grid-column:span 2;color:var(--red)">${esc(e.message)}</div>`;}
 }
 
@@ -700,15 +838,32 @@ function downloadAttachment(id, filename){
   document.body.removeChild(a);
 }
 
-function colorSel(){$("statusSel").className="finp w100 v-"+$("statusSel").value;}
+function colorSel(){
+  const v=$("statusSel").value;
+  $("statusSel").className="finp w100 v-"+v;
+  const r=$("resolutionInput");
+  if(r) r.classList.toggle("hidden", v!=="resolved");
+}
 
 async function doStatus(){
   const status=$("statusSel").value;
+  const body={status};
+  const r=$("resolutionInput");
+  if(status==="resolved" && r && r.value.trim()) body.resolution_summary=r.value.trim();
   try{
-    await apiFetch("/tickets/"+curTicket+"/status",{method:"PATCH",headers:authH(),body:JSON.stringify({status})});
+    await apiFetch("/tickets/"+curTicket+"/status",{method:"PATCH",headers:authH(),body:JSON.stringify(body)});
     flash("statusMsg","✓ Status updated: "+status.replace(/_/g," "),true);
     await loadDetail(curTicket);loadTickets();
   }catch(e){flash("statusMsg","Error: "+e.message,false);}
+}
+
+async function doPriority(){
+  const priority=$("prioritySel").value;
+  try{
+    await apiFetch("/tickets/"+curTicket+"/priority",{method:"PATCH",headers:authH(),body:JSON.stringify({priority})});
+    flash("priorityMsg","✓ Priority set to "+priority,true);
+    loadTickets();
+  }catch(e){flash("priorityMsg","Error: "+e.message,false);}
 }
 
 async function addNote(){
@@ -802,6 +957,132 @@ document.addEventListener("click",e=>{if(!$("notifWrap").contains(e.target)){not
 async function readNotif(id,ticketId){try{await apiFetch(`/notifications/${id}/read`,{method:"PATCH",headers:authH()});loadNotifications();}catch{}if(ticketId){$("notifPanel").classList.add("hidden");notifOpen=false;openModal(ticketId);}}
 async function markAllRead(){try{await apiFetch("/notifications/read-all",{method:"PATCH",headers:authH()});loadNotifications();}catch{}}
 function showToast(msg){const t=document.createElement("div");t.style.cssText="position:fixed;bottom:24px;right:24px;background:#1E293B;color:#fff;padding:12px 18px;border-radius:8px;font-size:13px;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.3);max-width:320px;line-height:1.4";t.textContent="🔔 "+msg;document.body.appendChild(t);setTimeout(()=>t.remove(),4000);}
+
+// ═══════════════════════════════════════════
+//  Priority helper
+// ═══════════════════════════════════════════
+function priBadge(p){ p=(p||"normal").toLowerCase(); return `<span class="pri pri-${p}">${esc(p)}</span>`; }
+
+// ═══════════════════════════════════════════
+//  Agent presence
+// ═══════════════════════════════════════════
+async function initAgentStatus(){
+  try{
+    const list=await apiFetch("/agent/presence",{headers:authH()});
+    const me=list.find(u=>u.username===S.user);
+    const st=(me&&me.chat_status)||"offline";
+    $("agentStatusSel").value=st; paintAgentDot(st);
+  }catch{}
+}
+function paintAgentDot(st){ $("agentDot").className="agent-status-dot "+st; }
+async function setAgentStatus(){
+  const st=$("agentStatusSel").value;
+  try{ await apiFetch("/agent/status",{method:"PATCH",headers:authH(),body:JSON.stringify({status:st})}); paintAgentDot(st); }
+  catch(e){ alert("Could not update status: "+e.message); }
+}
+
+// ═══════════════════════════════════════════
+//  Live chat (staff)
+// ═══════════════════════════════════════════
+let curChat=null, chatPollTimer=null, chatWaitTimer=null;
+
+async function pollChatWaiting(){
+  if(!S.token) return;
+  try{
+    const sessions=await apiFetch("/chat/sessions?status=waiting",{headers:authH()});
+    const b=$("chatWaitingBadge");
+    if(sessions.length>0){ b.textContent=sessions.length; b.classList.remove("hidden"); }
+    else b.classList.add("hidden");
+  }catch{}
+}
+
+async function loadChatSessions(){
+  const el=$("chatSessList");
+  try{
+    const sessions=await apiFetch("/chat/sessions",{headers:authH()});
+    if(!sessions.length){ el.innerHTML='<div class="notif-empty">No active conversations.</div>'; return; }
+    el.innerHTML=sessions.map(s=>`
+      <div class="chat-sess-item ${curChat===s.id?'active':''}" onclick="openChatSession('${esc(s.id)}')">
+        <div class="chat-sess-name">${esc(s.display_name||"User")}
+          <span class="chat-sess-badge csb-${s.status}">${esc(s.status)}</span></div>
+        <div class="chat-sess-meta">${esc(s.subject||s.hostname||"")}${s.agent_username?" · "+esc(s.agent_username):""}</div>
+      </div>`).join("");
+  }catch(e){ el.innerHTML=`<div class="notif-empty">Error: ${esc(e.message)}</div>`; }
+}
+
+async function openChatSession(id){
+  curChat=id;
+  $("chatEmpty").classList.add("hidden");
+  $("chatActive").classList.remove("hidden");
+  $("chatThread").innerHTML="";
+  loadChatSessions(); loadCannedTools();
+  await refreshChatThread();
+  if(chatPollTimer) clearInterval(chatPollTimer);
+  chatPollTimer=setInterval(()=>{ if(curChat && !$("pgChat").classList.contains("hidden")) refreshChatThread(); },3000);
+}
+
+async function refreshChatThread(){
+  if(!curChat) return;
+  try{
+    const msgs=await apiFetch("/chat/sessions/"+curChat+"/messages",{headers:authH()});
+    const sessions=await apiFetch("/chat/sessions",{headers:authH()});
+    const s=sessions.find(x=>x.id===curChat);
+    if(s){
+      $("chatPeer").textContent=s.display_name||"User";
+      $("chatPeerMeta").textContent=(s.hostname||"")+(s.agent_username?" · agent: "+s.agent_username:"");
+      $("chatClaimBtn").style.display=s.agent_username?"none":"";
+    }
+    const thread=$("chatThread");
+    thread.innerHTML=msgs.map(m=>{
+      if(m.sender_role==="system") return `<div class="cbub cbub-system">${esc(m.content)}</div>`;
+      const cls=m.sender_role==="agent"?"cbub-agent":"cbub-user";
+      const name=m.sender_role==="agent"?"":`<div class="cbub-name">${esc(m.sender_name||"User")}</div>`;
+      return `<div style="display:flex;flex-direction:column">${name}<div class="cbub ${cls}">${esc(m.content)}</div></div>`;
+    }).join("");
+    thread.scrollTop=thread.scrollHeight;
+  }catch{}
+}
+
+async function claimChat(){
+  if(!curChat) return;
+  try{ await apiFetch("/chat/sessions/"+curChat+"/claim",{method:"POST",headers:authH()}); refreshChatThread(); loadChatSessions(); }
+  catch(e){ alert("Error: "+e.message); }
+}
+async function sendChatReply(){
+  const ta=$("chatReply"); const text=ta.value.trim();
+  if(!text||!curChat) return;
+  ta.value="";
+  try{ await apiFetch("/chat/sessions/"+curChat+"/agent-messages",{method:"POST",headers:authH(),body:JSON.stringify({content:text})}); refreshChatThread(); }
+  catch(e){ alert("Error: "+e.message); ta.value=text; }
+}
+async function closeChatStaff(){
+  if(!curChat||!confirm("End this chat?")) return;
+  try{ await apiFetch("/chat/sessions/"+curChat+"/close-staff",{method:"POST",headers:authH()}); refreshChatThread(); loadChatSessions(); }
+  catch(e){ alert("Error: "+e.message); }
+}
+async function loadCannedTools(){
+  const el=$("cannedTools");
+  try{
+    const list=await apiFetch("/canned-responses",{headers:authH()});
+    let html=list.map(c=>`<button class="btn btn-ghost btn-xs" title="${esc(c.body)}" onclick="insertCanned(${c.id})">💬 ${esc(c.title)}</button>`).join("");
+    html+=`<button class="btn btn-ghost btn-xs" onclick="newCanned()">+ Template</button>`;
+    el.innerHTML=html; window._canned=list;
+  }catch{ el.innerHTML=""; }
+}
+function insertCanned(id){
+  const c=(window._canned||[]).find(x=>x.id===id);
+  if(!c) return;
+  const ta=$("chatReply"); ta.value=(ta.value?ta.value+"\n":"")+c.body; ta.focus();  // insert, not send
+}
+async function newCanned(){
+  const title=prompt("Template title:"); if(!title) return;
+  const body=prompt("Template text:"); if(!body) return;
+  try{ await apiFetch("/canned-responses",{method:"POST",headers:authH(),body:JSON.stringify({title,body,is_shared:true})}); loadCannedTools(); }
+  catch(e){ alert("Error: "+e.message); }
+}
+document.addEventListener("keydown",e=>{
+  if(e.key==="Enter" && !e.shiftKey && document.activeElement===$("chatReply")){ e.preventDefault(); sendChatReply(); }
+});
 </script>
 </body>
 </html>
