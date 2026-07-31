@@ -264,6 +264,93 @@ textarea.note-inp:focus{border-color:var(--blue)}
   overflow:hidden;margin-top:14px}
 .pg-title{font-size:20px;font-weight:800;margin-bottom:3px;color:var(--txt)}
 .pg-sub{color:var(--muted);font-size:13px}
+
+/* ── Priority badges ────────────────────────────────── */
+.pri{display:inline-block;padding:2px 8px;border-radius:6px;font-size:10px;
+  font-weight:800;text-transform:uppercase;letter-spacing:.4px}
+.pri-urgent{background:#FEE2E2;color:#B91C1C}
+.pri-high{background:#FFEDD5;color:#C2410C}
+.pri-normal{background:#F1F5F9;color:#475569}
+.pri-low{background:#F0FDF4;color:#15803D}
+
+/* ── Agent status selector ──────────────────────────── */
+.agent-status-wrap{display:flex;align-items:center;gap:6px}
+.agent-status-dot{width:9px;height:9px;border-radius:50%;background:#9CA3AF}
+.agent-status-dot.available{background:var(--green)}
+.agent-status-dot.busy{background:var(--red)}
+.agent-status-dot.away{background:var(--amber)}
+.agent-status-dot.offline{background:#9CA3AF}
+.agent-status-sel{padding:4px 8px;border:1px solid var(--border);border-radius:8px;
+  background:#fff;font-size:12px;height:30px}
+
+/* ── Nav count badge ────────────────────────────────── */
+.nav-count{background:var(--red);color:#fff;font-size:10px;font-weight:800;
+  min-width:16px;height:16px;border-radius:9px;display:inline-flex;
+  align-items:center;justify-content:center;padding:0 4px;margin-left:auto}
+
+/* ── Live chat page ─────────────────────────────────── */
+.chat-layout{display:grid;grid-template-columns:280px 1fr;gap:14px;height:calc(100vh - 130px)}
+.chat-sessions{background:var(--card);border:1px solid var(--border);border-radius:12px;
+  overflow-y:auto}
+.chat-sess-hdr{padding:12px 14px;border-bottom:1px solid var(--border);font-weight:700;
+  font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);
+  position:sticky;top:0;background:var(--card)}
+.chat-sess-item{padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer}
+.chat-sess-item:hover{background:var(--page)}
+.chat-sess-item.active{background:var(--blue-lt);border-left:3px solid var(--blue)}
+.chat-sess-name{font-weight:700;font-size:13px}
+.chat-sess-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.chat-sess-badge{display:inline-block;font-size:9px;font-weight:800;padding:1px 6px;
+  border-radius:10px;text-transform:uppercase}
+.csb-waiting{background:#FFFBEB;color:#B45309}
+.csb-active{background:#ECFDF5;color:#065F46}
+.chat-main{background:var(--card);border:1px solid var(--border);border-radius:12px;
+  display:flex;flex-direction:column;overflow:hidden}
+.chat-main-hdr{padding:12px 16px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;gap:10px}
+.chat-thread{flex:1;overflow-y:auto;padding:16px;background:var(--page);display:flex;
+  flex-direction:column;gap:8px}
+.cbub{max-width:70%;padding:8px 12px;border-radius:12px;font-size:13px;line-height:1.4;
+  white-space:pre-wrap;word-break:break-word}
+.cbub-user{align-self:flex-start;background:#fff;border:1px solid var(--border)}
+.cbub-agent{align-self:flex-end;background:var(--blue);color:#fff}
+.cbub-system{align-self:center;background:transparent;color:var(--muted);font-size:11px;
+  font-style:italic}
+.cbub-name{font-size:10px;color:var(--muted);margin-bottom:2px}
+.chat-input-row{border-top:1px solid var(--border);padding:10px 12px}
+.chat-input-tools{display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap}
+.chat-input-send{display:flex;gap:8px}
+.chat-input-send textarea{flex:1;border:1px solid var(--border);border-radius:8px;
+  padding:8px 10px;resize:none;min-height:44px;font-size:13px;outline:none}
+.chat-input-send textarea:focus{border-color:var(--blue)}
+.chat-empty{flex:1;display:flex;align-items:center;justify-content:center;color:var(--muted);
+  font-size:14px}
+
+/* ── Knowledge base page ────────────────────────────── */
+.kb-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.kb-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px}
+.kb-card h3{font-size:13px;font-weight:700;margin-bottom:10px}
+.kb-cand{display:flex;align-items:center;justify-content:space-between;padding:8px 0;
+  border-bottom:1px solid var(--border);gap:8px}
+.kb-cand:last-child{border-bottom:none}
+.kb-cand-info{font-size:13px}
+.kb-cand-meta{font-size:11px;color:var(--muted)}
+.kb-status{display:inline-block;font-size:10px;font-weight:800;padding:2px 8px;
+  border-radius:10px;text-transform:uppercase}
+.kbs-draft{background:#FFFBEB;color:#B45309}
+.kbs-approved{background:#EFF6FF;color:#1D4ED8}
+.kbs-published{background:#ECFDF5;color:#065F46}
+.kbs-rejected{background:#FEF2F2;color:#B91C1C}
+.kb-src{font-size:10px;font-weight:700;color:#7C3AED;background:#F5F3FF;
+  padding:1px 6px;border-radius:6px}
+.kb-list-item{display:flex;align-items:center;justify-content:space-between;
+  padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:7px;gap:8px}
+.kb-mini-stat{display:flex;gap:16px;flex-wrap:wrap}
+.kb-mini-stat > div{text-align:center}
+.kb-mini-num{font-size:24px;font-weight:800}
+.kb-mini-lbl{font-size:11px;color:var(--muted)}
+.kb-md{font-size:13px;line-height:1.6;white-space:pre-wrap;background:var(--page);
+  border:1px solid var(--border);border-radius:8px;padding:14px;max-height:52vh;overflow-y:auto}
 </style>
 </head>
 <body>
@@ -313,6 +400,13 @@ textarea.note-inp:focus{border-color:var(--blue)}
       <button class="nav-btn active" id="navTkts" onclick="showPage('tickets')">
         <span class="nav-icon">🎫</span> Tickets
       </button>
+      <button class="nav-btn" id="navChat" onclick="showPage('chat')">
+        <span class="nav-icon">💬</span> Live Chat
+        <span class="nav-count hidden" id="chatWaitingBadge">0</span>
+      </button>
+      <button class="nav-btn" id="navKB" onclick="showPage('kb')">
+        <span class="nav-icon">📚</span> Knowledge Base
+      </button>
       <button class="nav-btn hidden" id="navUsrs" onclick="showPage('users')">
         <span class="nav-icon">👥</span> Users
       </button>
@@ -334,6 +428,17 @@ textarea.note-inp:focus{border-color:var(--blue)}
         <span class="last-upd-txt">Last updated: <span id="lastUpd">—</span></span>
       </div>
       <div class="ts-right">
+        <!-- Agent presence -->
+        <div class="agent-status-wrap" title="Your live-chat availability">
+          <span class="agent-status-dot" id="agentDot"></span>
+          <select id="agentStatusSel" class="agent-status-sel" onchange="setAgentStatus()">
+            <option value="offline">Offline</option>
+            <option value="available">Available</option>
+            <option value="busy">Busy</option>
+            <option value="away">Away</option>
+          </select>
+        </div>
+        <div class="ts-divider"></div>
         <!-- Notification Bell -->
         <div class="notif-wrap" id="notifWrap">
           <button class="notif-bell-btn" id="notifBellBtn" onclick="toggleNotifPanel(event)" title="Notifications">
@@ -401,6 +506,13 @@ textarea.note-inp:focus{border-color:var(--blue)}
           <option>Hardware</option><option>File Access / Permissions</option>
           <option>Performance Issues</option>
         </select>
+        <select id="fPriority" onchange="applyAndLoad()">
+          <option value="">All Priorities</option>
+          <option value="urgent">Urgent</option>
+          <option value="high">High</option>
+          <option value="normal">Normal</option>
+          <option value="low">Low</option>
+        </select>
         <div class="sep"></div>
         <div class="dgrp">
           <button class="dbtn" id="dToday"  onclick="dateRange('today')">Today</button>
@@ -419,11 +531,11 @@ textarea.note-inp:focus{border-color:var(--blue)}
         <div class="tbl-wrap">
           <table>
             <thead><tr>
-              <th>Ticket ID</th><th>User</th><th>Hostname</th>
+              <th>Ticket ID</th><th>Priority</th><th>User</th><th>Hostname</th>
               <th>Category</th><th>Sub-Cat</th><th>Status</th>
               <th>Assigned To</th><th>Created</th><th>Action</th>
             </tr></thead>
-            <tbody id="tBody"><tr class="empty-row"><td colspan="9">Loading…</td></tr></tbody>
+            <tbody id="tBody"><tr class="empty-row"><td colspan="10">Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="pagination">
@@ -502,6 +614,77 @@ textarea.note-inp:focus{border-color:var(--blue)}
       </div>
     </div>
 
+    <!-- ── LIVE CHAT PAGE ── -->
+    <div id="pgChat" class="page hidden">
+      <div class="chat-layout">
+        <div class="chat-sessions">
+          <div class="chat-sess-hdr">Conversations</div>
+          <div id="chatSessList"><div class="notif-empty">Loading…</div></div>
+        </div>
+        <div class="chat-main" id="chatMain">
+          <div class="chat-empty" id="chatEmpty">Select a conversation to begin.</div>
+          <div id="chatActive" class="hidden" style="display:flex;flex-direction:column;flex:1;min-height:0">
+            <div class="chat-main-hdr">
+              <div>
+                <div class="bold" id="chatPeer">—</div>
+                <div class="sm muted" id="chatPeerMeta"></div>
+              </div>
+              <div style="display:flex;gap:6px">
+                <button class="btn btn-ghost btn-sm" id="chatClaimBtn" onclick="claimChat()">Claim</button>
+                <button class="btn btn-danger btn-sm" onclick="closeChatStaff()">End Chat</button>
+              </div>
+            </div>
+            <div class="chat-thread" id="chatThread"></div>
+            <div class="chat-input-row">
+              <div class="chat-input-tools" id="cannedTools"></div>
+              <div class="chat-input-send">
+                <textarea id="chatReply" placeholder="Type a reply…  (Enter to send, Shift+Enter for newline)"></textarea>
+                <button class="btn btn-blue" onclick="sendChatReply()">Send</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── KNOWLEDGE BASE PAGE ── -->
+    <div id="pgKB" class="page hidden">
+      <div class="pg-title">Knowledge Base</div>
+      <div class="pg-sub">Insights mined from resolved tickets. AI-assisted drafts require review and approval before publishing.</div>
+
+      <div class="kb-card" style="margin-top:14px">
+        <div class="kb-mini-stat" id="kbStats"><span class="muted sm">Loading analysis…</span></div>
+      </div>
+
+      <div class="kb-grid" style="margin-top:14px">
+        <div class="kb-card">
+          <h3>🔁 Suggested Articles (from ticket patterns)</h3>
+          <div id="kbCandidates"><div class="muted sm">Loading…</div></div>
+        </div>
+        <div class="kb-card">
+          <h3>📊 Frequent Problems</h3>
+          <div id="kbFrequent"><div class="muted sm">Loading…</div></div>
+        </div>
+      </div>
+
+      <div class="kb-card" style="margin-top:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <h3 style="margin:0">📄 Articles &amp; Drafts</h3>
+          <div style="display:flex;gap:6px;align-items:center">
+            <select id="kbStatusFilter" class="rows-sel" onchange="loadKBArticles()">
+              <option value="">All</option>
+              <option value="draft">Drafts (need review)</option>
+              <option value="approved">Approved</option>
+              <option value="published">Published</option>
+              <option value="rejected">Rejected</option>
+            </select>
+            <button class="btn btn-ghost btn-sm" onclick="openNewArticle()">+ New Article</button>
+          </div>
+        </div>
+        <div id="kbArticleList"><div class="muted sm">Loading…</div></div>
+      </div>
+    </div>
+
   </div><!-- end .main-wrap -->
 </div><!-- end #dash -->
 
@@ -530,12 +713,23 @@ textarea.note-inp:focus{border-color:var(--blue)}
    </div>
    <div class="modal-right">
      <div class="ablock">
+       <div class="ablock-title">Priority</div>
+       <select class="finp w100" id="prioritySel" onchange="doPriority()">
+         <option value="low">Low</option>
+         <option value="normal">Normal</option>
+         <option value="high">High</option>
+         <option value="urgent">Urgent</option>
+       </select>
+       <div id="priorityMsg" class="hidden"></div>
+     </div>
+     <div class="ablock">
        <div class="ablock-title">Change Status</div>
        <select class="finp w100" id="statusSel" onchange="colorSel()">
          <option value="active">Active</option>
          <option value="in_progress">In Progress</option>
          <option value="resolved">Resolved</option>
        </select>
+       <textarea class="note-inp mt2 hidden" id="resolutionInput" placeholder="Resolution summary (recommended when resolving)…"></textarea>
        <button class="btn btn-blue btn-sm w100 mt2" onclick="doStatus()">Update Status</button>
        <div id="statusMsg" class="hidden"></div>
      </div>
@@ -585,6 +779,38 @@ textarea.note-inp:focus{border-color:var(--blue)}
   </div>
 </div>
 
+<!-- ════════════════ KB ARTICLE MODAL ════════════════ -->
+<div id="kbOverlay" class="hidden" onclick="kbOvClick(event)"
+  style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:600;display:flex;align-items:flex-start;justify-content:center;padding:28px 16px;overflow-y:auto">
+  <div class="modal" style="max-width:760px;width:100%" onclick="event.stopPropagation()">
+    <div class="modal-hdr">
+      <h2 id="kbmTitle">Article</h2>
+      <button class="modal-close" onclick="closeKB()">✕</button>
+    </div>
+    <div style="padding:20px 22px">
+      <div id="kbmBadges" style="margin-bottom:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+        <div><label class="flbl">Title</label><input class="finp" id="kbmTitleInp"/></div>
+        <div><label class="flbl">Category</label><input class="finp" id="kbmCat"/></div>
+      </div>
+      <label class="flbl">Content (Markdown)</label>
+      <textarea class="note-inp" id="kbmContent" style="min-height:260px;font-family:monospace;font-size:12px"></textarea>
+      <div id="kbmPreview" class="kb-md" style="margin-top:10px;display:none"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
+        <button class="btn btn-ghost btn-sm" onclick="saveArticle()">💾 Save Changes</button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleKBPreview()">👁 Preview</button>
+        <span style="flex:1"></span>
+        <span id="kbAdminActions" class="hidden" style="display:flex;gap:8px">
+          <button class="btn btn-blue btn-sm" onclick="reviewArticle('approved')">✓ Approve</button>
+          <button class="btn btn-blue btn-sm" onclick="reviewArticle('published')">🌐 Publish</button>
+          <button class="btn btn-danger btn-sm" onclick="reviewArticle('rejected')">✕ Reject</button>
+        </span>
+      </div>
+      <div id="kbmMsg" class="hidden mt2"></div>
+    </div>
+  </div>
+</div>
+
 <script>
 // ═══════════════════════════════════════════
 //  CONFIG  ← set your server IP/URL here
@@ -609,7 +835,7 @@ let technicianList = [];
 let filteredCache = [];
 let curPage = 1;
 let pageSize = 10;
-let F = { status:"", category:"", dateMode:"", from:"", to:"" };
+let F = { status:"", category:"", priority:"", dateMode:"", from:"", to:"" };
 
 function loadSession(){
   try{
@@ -774,6 +1000,10 @@ function initDashboard(){
 
   if(S.role==="super_admin") loadTechnicians();
   initNotifications();
+  initAgentStatus();
+  pollChatWaiting();
+  if(chatWaitTimer) clearInterval(chatWaitTimer);
+  chatWaitTimer=setInterval(pollChatWaiting, 15000);
 }
 
 window.addEventListener("load",()=>{ if(S.token) initDashboard(); });
@@ -961,11 +1191,13 @@ function showToast(msg){
 //  Page nav
 // ═══════════════════════════════════════════
 function showPage(p){
-  ["pgTickets","pgUsers","pgUpdate"].forEach(id=>hide(id));
-  ["navTkts","navUsrs","navUpd"].forEach(id=>$(id).classList.remove("active"));
+  ["pgTickets","pgUsers","pgUpdate","pgChat","pgKB"].forEach(id=>hide(id));
+  ["navTkts","navUsrs","navUpd","navChat","navKB"].forEach(id=>$(id).classList.remove("active"));
   if(p==="tickets"){show("pgTickets");$("navTkts").classList.add("active");loadAll();}
   if(p==="users")  {show("pgUsers"); $("navUsrs").classList.add("active");loadUsers();}
   if(p==="update") {show("pgUpdate");$("navUpd").classList.add("active");checkUpdates();}
+  if(p==="chat")   {show("pgChat"); $("navChat").classList.add("active");loadChatSessions();}
+  if(p==="kb")     {show("pgKB");   $("navKB").classList.add("active");loadKB();}
 }
 
 // ═══════════════════════════════════════════
@@ -979,7 +1211,7 @@ async function loadAll(){
     $("lastUpd").textContent=new Date().toLocaleTimeString([],
       {hour:"2-digit",minute:"2-digit",second:"2-digit"});
   }catch(e){
-    $("tBody").innerHTML=`<tr class="empty-row"><td colspan="9">Error: ${esc(e.message)}</td></tr>`;
+    $("tBody").innerHTML=`<tr class="empty-row"><td colspan="10">Error: ${esc(e.message)}</td></tr>`;
   }
 }
 
@@ -987,6 +1219,7 @@ async function loadFiltered(){
   const qs=[];
   if(F.status)   qs.push("status="+encodeURIComponent(F.status));
   if(F.category) qs.push("category="+encodeURIComponent(F.category));
+  if(F.priority) qs.push("priority="+encodeURIComponent(F.priority));
   if(F.from)     qs.push("date_from="+F.from);
   if(F.to)       qs.push("date_to="+F.to);
   const url="/tickets/"+(qs.length?"?"+qs.join("&"):"");
@@ -994,7 +1227,7 @@ async function loadFiltered(){
     filteredCache=await apiFetch(url,{headers:authH()});
     curPage=1;renderTable();
   }catch(e){
-    $("tBody").innerHTML=`<tr class="empty-row"><td colspan="9">Error: ${esc(e.message)}</td></tr>`;
+    $("tBody").innerHTML=`<tr class="empty-row"><td colspan="10">Error: ${esc(e.message)}</td></tr>`;
   }
 }
 
@@ -1015,8 +1248,8 @@ function updateCounts(){
 function renderTable(){
   const tb=$("tBody");
   if(!filteredCache||filteredCache.length===0){
-    const hasF=F.status||F.category||F.from||F.to;
-    tb.innerHTML=`<tr class="empty-row"><td colspan="9">`+
+    const hasF=F.status||F.category||F.priority||F.from||F.to;
+    tb.innerHTML=`<tr class="empty-row"><td colspan="10">`+
       (hasF?`No tickets match filters. <button class="show-all-btn" style="margin-left:8px" onclick="showAll()">Show All</button>`:`No tickets yet.`)+
       `</td></tr>`;
     $("pgInfo").textContent="No tickets"; $("pgBtns").innerHTML=""; return;
@@ -1031,6 +1264,7 @@ function renderTable(){
   tb.innerHTML=pageData.map(t=>`
     <tr onclick="openModal('${esc(t.id)}')" title="Click to view/edit">
       <td><code style="font-size:11px;font-weight:700">${esc(t.id)}</code></td>
+      <td>${priBadge(t.priority)}</td>
       <td>${esc(t.username||"—")}</td>
       <td>${esc(t.hostname||"—")}</td>
       <td>${esc(t.category)}</td>
@@ -1081,8 +1315,9 @@ function changePageSize(){ pageSize=parseInt($("rowsSel").value)||10; curPage=1;
 //  Filters
 // ═══════════════════════════════════════════
 function showAll(){
-  F={status:"",category:"",dateMode:"",from:"",to:""};
+  F={status:"",category:"",priority:"",dateMode:"",from:"",to:""};
   $("fStatus").value="";$("fCat").value="";
+  if($("fPriority")) $("fPriority").value="";
   $("dFrom").value="";$("dTo").value="";
   ["dToday","dWeek","dMonth","dCustom"].forEach(id=>$(id).classList.remove("on"));
   $("customDates").style.display="none";
@@ -1096,7 +1331,7 @@ function highlightCards(){
   if(F.status==="resolved")    $("cResolved").classList.add("selected");
 }
 function syncDrop(){F.status=$("fStatus").value;highlightCards();loadFiltered();}
-function applyAndLoad(){ F.category=$("fCat").value; if(F.dateMode==="custom"){F.from=$("dFrom").value;F.to=$("dTo").value;} loadFiltered(); }
+function applyAndLoad(){ F.category=$("fCat").value; if($("fPriority")) F.priority=$("fPriority").value; if(F.dateMode==="custom"){F.from=$("dFrom").value;F.to=$("dTo").value;} loadFiltered(); }
 function dateRange(mode){
   F.dateMode=mode;
   ["dToday","dWeek","dMonth","dCustom"].forEach(id=>$(id).classList.remove("on"));
@@ -1134,6 +1369,7 @@ async function loadTicketDetail(id){
     $("mGrid").innerHTML=[
       ["Ticket ID",  `<code style="font-weight:700">${esc(t.id)}</code>`],
       ["Status",     badge(t.status)],
+      ["Priority",   priBadge(t.priority)],
       ["Username",   esc(t.username||"—")],
       ["Hostname",   esc(t.hostname||"—")],
       ["IP Address", esc(t.ip_address||"—")],
@@ -1146,8 +1382,10 @@ async function loadTicketDetail(id){
       ["Assigned To",esc(t.assigned_to||"—")],
       ["Created",    fmt(t.created_at)],
       ["Updated",    fmt(t.updated_at)],
+      ...(t.resolution_summary?[["Resolution",`<span style="white-space:pre-wrap">${esc(t.resolution_summary)}</span>`]]:[]),
     ].map(([k,v])=>`<div class="dk">${k}</div><div class="dv">${v}</div>`).join("");
     $("statusSel").value=t.status; colorSel();
+    $("prioritySel").value=t.priority||"normal";
     if(S.role==="super_admin") populateAssignDropdown(t.assigned_to);
   }catch(e){
     $("mGrid").innerHTML=`<div style="grid-column:span 2;color:var(--red)">Error: ${esc(e.message)}</div>`;
@@ -1197,16 +1435,32 @@ function downloadAttachment(id, filename){
 function colorSel(){
   const v=$("statusSel").value;
   $("statusSel").className="finp w100 v-"+v;
+  // Show the resolution summary box when resolving.
+  const r=$("resolutionInput");
+  if(r){ r.classList.toggle("hidden", v!=="resolved"); }
 }
 
 async function doStatus(){
   const status=$("statusSel").value;
+  const body={status};
+  const r=$("resolutionInput");
+  if(status==="resolved" && r && r.value.trim()) body.resolution_summary=r.value.trim();
   try{
     await apiFetch("/tickets/"+curTicket+"/status",{method:"PATCH",headers:authH(),
-      body:JSON.stringify({status})});
+      body:JSON.stringify(body)});
     flash("statusMsg","✓ Status updated to: "+status.replace(/_/g," "),true);
     await loadTicketDetail(curTicket); loadAll();
   }catch(e){flash("statusMsg","Error: "+e.message,false);}
+}
+
+async function doPriority(){
+  const priority=$("prioritySel").value;
+  try{
+    await apiFetch("/tickets/"+curTicket+"/priority",{method:"PATCH",headers:authH(),
+      body:JSON.stringify({priority})});
+    flash("priorityMsg","✓ Priority set to "+priority,true);
+    loadAll();
+  }catch(e){flash("priorityMsg","Error: "+e.message,false);}
 }
 
 async function doAssign(){
@@ -1262,6 +1516,7 @@ document.addEventListener("keydown",e=>{
   if(e.key==="Escape"){
     if(!$("modalOverlay").classList.contains("hidden")) closeModal();
     if(!$("acctOverlay").classList.contains("hidden")) closeAccount();
+    if(!$("kbOverlay").classList.contains("hidden")) closeKB();
   }
 });
 
@@ -1343,6 +1598,266 @@ async function applyUpdate(){
 // ═══════════════════════════════════════════
 function startTimer(){ stopTimer(); timer=setInterval(()=>{ if(!$("pgTickets").classList.contains("hidden")) loadAll(); },20000); }
 function stopTimer(){ if(timer){clearInterval(timer);timer=null;} }
+
+// ═══════════════════════════════════════════
+//  Priority helper
+// ═══════════════════════════════════════════
+function priBadge(p){
+  p=(p||"normal").toLowerCase();
+  return `<span class="pri pri-${p}">${esc(p)}</span>`;
+}
+
+// ═══════════════════════════════════════════
+//  Agent presence
+// ═══════════════════════════════════════════
+async function initAgentStatus(){
+  try{
+    const list=await apiFetch("/agent/presence",{headers:authH()});
+    const me=list.find(u=>u.username===S.user);
+    const st=(me&&me.chat_status)||"offline";
+    $("agentStatusSel").value=st;
+    paintAgentDot(st);
+  }catch{}
+}
+function paintAgentDot(st){
+  $("agentDot").className="agent-status-dot "+st;
+}
+async function setAgentStatus(){
+  const st=$("agentStatusSel").value;
+  try{
+    await apiFetch("/agent/status",{method:"PATCH",headers:authH(),
+      body:JSON.stringify({status:st})});
+    paintAgentDot(st);
+  }catch(e){ alert("Could not update status: "+e.message); }
+}
+
+// ═══════════════════════════════════════════
+//  Live chat (staff)
+// ═══════════════════════════════════════════
+let curChat=null, chatLastId=0, chatPollTimer=null, chatWaitTimer=null;
+
+async function pollChatWaiting(){
+  if(!S.token) return;
+  try{
+    const sessions=await apiFetch("/chat/sessions?status=waiting",{headers:authH()});
+    const n=sessions.length;
+    const b=$("chatWaitingBadge");
+    if(n>0){ b.textContent=n; b.classList.remove("hidden"); }
+    else b.classList.add("hidden");
+  }catch{}
+}
+
+async function loadChatSessions(){
+  const el=$("chatSessList");
+  try{
+    const sessions=await apiFetch("/chat/sessions",{headers:authH()});
+    if(!sessions.length){ el.innerHTML='<div class="notif-empty">No active conversations.</div>'; return; }
+    el.innerHTML=sessions.map(s=>`
+      <div class="chat-sess-item ${curChat===s.id?'active':''}" onclick="openChatSession('${esc(s.id)}')">
+        <div class="chat-sess-name">${esc(s.display_name||"User")}
+          <span class="chat-sess-badge csb-${s.status}">${esc(s.status)}</span></div>
+        <div class="chat-sess-meta">${esc(s.subject||s.hostname||"")}${s.agent_username?" · "+esc(s.agent_username):""}</div>
+      </div>`).join("");
+  }catch(e){ el.innerHTML=`<div class="notif-empty">Error: ${esc(e.message)}</div>`; }
+}
+
+async function openChatSession(id){
+  curChat=id; chatLastId=0;
+  $("chatEmpty").classList.add("hidden");
+  $("chatActive").classList.remove("hidden");
+  $("chatThread").innerHTML="";
+  loadChatSessions();
+  loadCannedTools();
+  await refreshChatThread(true);
+  if(chatPollTimer) clearInterval(chatPollTimer);
+  chatPollTimer=setInterval(()=>{ if(curChat && !$("pgChat").classList.contains("hidden")) refreshChatThread(false); },3000);
+}
+
+async function refreshChatThread(full){
+  if(!curChat) return;
+  try{
+    const msgs=await apiFetch("/chat/sessions/"+curChat+"/messages",{headers:authH()});
+    const sessions=await apiFetch("/chat/sessions",{headers:authH()});
+    const s=sessions.find(x=>x.id===curChat);
+    if(s){
+      $("chatPeer").textContent=s.display_name||"User";
+      $("chatPeerMeta").textContent=(s.hostname||"")+(s.agent_username?" · agent: "+s.agent_username:"");
+      $("chatClaimBtn").style.display=s.agent_username?"none":"";
+    }
+    const thread=$("chatThread");
+    thread.innerHTML=msgs.map(m=>{
+      if(m.sender_role==="system") return `<div class="cbub cbub-system">${esc(m.content)}</div>`;
+      const cls=m.sender_role==="agent"?"cbub-agent":"cbub-user";
+      const name=m.sender_role==="agent"?"":`<div class="cbub-name">${esc(m.sender_name||"User")}</div>`;
+      return `<div style="display:flex;flex-direction:column">${name}<div class="cbub ${cls}">${esc(m.content)}</div></div>`;
+    }).join("");
+    thread.scrollTop=thread.scrollHeight;
+  }catch{}
+}
+
+async function claimChat(){
+  if(!curChat) return;
+  try{ await apiFetch("/chat/sessions/"+curChat+"/claim",{method:"POST",headers:authH()}); refreshChatThread(false); loadChatSessions(); }
+  catch(e){ alert("Error: "+e.message); }
+}
+
+async function sendChatReply(){
+  const ta=$("chatReply"); const text=ta.value.trim();
+  if(!text||!curChat) return;
+  ta.value="";
+  try{
+    await apiFetch("/chat/sessions/"+curChat+"/agent-messages",{method:"POST",headers:authH(),
+      body:JSON.stringify({content:text})});
+    refreshChatThread(false);
+  }catch(e){ alert("Error: "+e.message); ta.value=text; }
+}
+
+async function closeChatStaff(){
+  if(!curChat||!confirm("End this chat?")) return;
+  try{
+    await apiFetch("/chat/sessions/"+curChat+"/close-staff",{method:"POST",headers:authH()});
+    refreshChatThread(false); loadChatSessions();
+  }catch(e){ alert("Error: "+e.message); }
+}
+
+// Canned responses — INSERT into editor, never auto-send
+async function loadCannedTools(){
+  const el=$("cannedTools");
+  try{
+    const list=await apiFetch("/canned-responses",{headers:authH()});
+    let html=list.map(c=>`<button class="btn btn-ghost btn-xs" title="${esc(c.body)}" onclick="insertCanned(${c.id})">💬 ${esc(c.title)}</button>`).join("");
+    html+=`<button class="btn btn-ghost btn-xs" onclick="newCanned()">+ Template</button>`;
+    el.innerHTML=html;
+    window._canned=list;
+  }catch{ el.innerHTML=""; }
+}
+function insertCanned(id){
+  const c=(window._canned||[]).find(x=>x.id===id);
+  if(!c) return;
+  const ta=$("chatReply");
+  ta.value=(ta.value?ta.value+"\n":"")+c.body;   // insert for review, not sent
+  ta.focus();
+}
+async function newCanned(){
+  const title=prompt("Template title:"); if(!title) return;
+  const body=prompt("Template text:"); if(!body) return;
+  try{ await apiFetch("/canned-responses",{method:"POST",headers:authH(),
+    body:JSON.stringify({title,body,is_shared:true})}); loadCannedTools(); }
+  catch(e){ alert("Error: "+e.message); }
+}
+
+// ═══════════════════════════════════════════
+//  Knowledge base
+// ═══════════════════════════════════════════
+async function loadKB(){ await Promise.all([loadKBAnalysis(),loadKBArticles()]); }
+
+async function loadKBAnalysis(){
+  try{
+    const a=await apiFetch("/kb/analysis",{headers:authH()});
+    $("kbStats").innerHTML=`
+      <div><div class="kb-mini-num">${a.total_tickets}</div><div class="kb-mini-lbl">Total tickets</div></div>
+      <div><div class="kb-mini-num">${a.resolved_tickets}</div><div class="kb-mini-lbl">Resolved</div></div>
+      <div><div class="kb-mini-num">${Math.round((a.resolution_rate||0)*100)}%</div><div class="kb-mini-lbl">Resolution rate</div></div>
+      <div><div class="kb-mini-num">${a.kb_candidates.filter(c=>c.recommended).length}</div><div class="kb-mini-lbl">Suggested articles</div></div>`;
+    const cand=a.kb_candidates.filter(c=>c.recommended);
+    $("kbCandidates").innerHTML=cand.length?cand.map(c=>`
+      <div class="kb-cand">
+        <div class="kb-cand-info">${esc(c.cluster)}
+          <div class="kb-cand-meta">${c.ticket_count} tickets · ${c.resolved_count} resolved</div></div>
+        <button class="btn btn-blue btn-xs" onclick="generateDraft('${esc(c.cluster).replace(/'/g,"\\'")}')">✨ Generate Draft</button>
+      </div>`).join(""):'<div class="muted sm">No new suggestions — existing clusters are documented.</div>';
+    $("kbFrequent").innerHTML=a.frequent_problems.map(p=>`
+      <div class="kb-cand"><div class="kb-cand-info">${esc(p.cluster)}</div>
+        <span class="muted sm">${p.count}×</span></div>`).join("")||'<div class="muted sm">No data yet.</div>';
+  }catch(e){ $("kbStats").innerHTML=`<span class="msg-err">Error: ${esc(e.message)}</span>`; }
+}
+
+async function generateDraft(cluster){
+  try{
+    const a=await apiFetch("/kb/generate-draft",{method:"POST",headers:authH(),
+      body:JSON.stringify({cluster})});
+    await loadKBArticles();
+    openArticle(a.id);
+  }catch(e){ alert("Error: "+e.message); }
+}
+
+async function loadKBArticles(){
+  const el=$("kbArticleList");
+  const st=$("kbStatusFilter").value;
+  try{
+    const items=await apiFetch("/kb/articles"+(st?"?status="+st:""),{headers:authH()});
+    if(!items.length){ el.innerHTML='<div class="muted sm">No articles yet.</div>'; return; }
+    el.innerHTML=items.map(a=>`
+      <div class="kb-list-item">
+        <div style="min-width:0">
+          <div class="bold" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(a.title)}</div>
+          <div class="sm muted">${esc(a.category||"—")} · ${esc(a.article_type)}${a.source==="ai_generated"?' · <span class="kb-src">AI DRAFT</span>':''}</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
+          <span class="kb-status kbs-${a.workflow_status}">${esc(a.workflow_status)}</span>
+          <button class="btn btn-ghost btn-xs" onclick="openArticle(${a.id})">Open</button>
+        </div>
+      </div>`).join("");
+  }catch(e){ el.innerHTML=`<div class="msg-err">Error: ${esc(e.message)}</div>`; }
+}
+
+let curArticle=null;
+async function openArticle(id){
+  curArticle=id;
+  hide("kbmMsg");
+  $("kbmPreview").style.display="none";
+  try{
+    const a=await apiFetch("/kb/articles/"+id,{headers:authH()});
+    $("kbmTitle").textContent=a.title;
+    $("kbmTitleInp").value=a.title;
+    $("kbmCat").value=a.category||"";
+    $("kbmContent").value=a.content;
+    $("kbmBadges").innerHTML=`<span class="kb-status kbs-${a.workflow_status}">${esc(a.workflow_status)}</span>`+
+      (a.source==="ai_generated"?' <span class="kb-src">AI-GENERATED DRAFT — REVIEW REQUIRED</span>':'')+
+      (a.approved_by?` <span class="sm muted">approved by ${esc(a.approved_by)}</span>`:'');
+    $("kbAdminActions").classList.toggle("hidden", S.role!=="super_admin");
+    show("kbOverlay");
+  }catch(e){ alert("Error: "+e.message); }
+}
+function closeKB(){ hide("kbOverlay"); curArticle=null; }
+function kbOvClick(e){ if(e.target===$("kbOverlay")) closeKB(); }
+function toggleKBPreview(){
+  const p=$("kbmPreview");
+  if(p.style.display==="none"){ p.textContent=$("kbmContent").value; p.style.display="block"; }
+  else p.style.display="none";
+}
+async function saveArticle(){
+  if(!curArticle) return;
+  try{
+    await apiFetch("/kb/articles/"+curArticle,{method:"PATCH",headers:authH(),
+      body:JSON.stringify({title:$("kbmTitleInp").value,category:$("kbmCat").value,content:$("kbmContent").value})});
+    flash("kbmMsg","✓ Saved. (Editing an approved article returns it to draft.)",true);
+    loadKBArticles(); openArticle(curArticle);
+  }catch(e){ flash("kbmMsg","Error: "+e.message,false); }
+}
+async function reviewArticle(decision){
+  if(!curArticle) return;
+  try{
+    await apiFetch("/kb/articles/"+curArticle+"/review",{method:"POST",headers:authH(),
+      body:JSON.stringify({decision})});
+    flash("kbmMsg","✓ Article "+decision,true);
+    loadKBArticles(); openArticle(curArticle);
+  }catch(e){ flash("kbmMsg","Error: "+e.message,false); }
+}
+async function openNewArticle(){
+  try{
+    const a=await apiFetch("/kb/articles",{method:"POST",headers:authH(),
+      body:JSON.stringify({title:"Untitled article",content:"# New article\n\nWrite here…"})});
+    await loadKBArticles(); openArticle(a.id);
+  }catch(e){ alert("Error: "+e.message); }
+}
+
+// Enter-to-send in chat reply (Shift+Enter = newline)
+document.addEventListener("keydown",e=>{
+  if(e.key==="Enter" && !e.shiftKey && document.activeElement===$("chatReply")){
+    e.preventDefault(); sendChatReply();
+  }
+});
 </script>
 </body>
 </html>
