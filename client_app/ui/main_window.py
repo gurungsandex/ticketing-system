@@ -11,11 +11,13 @@ from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QLineEdit, QTextEdit, QPushButton, QScrollArea,
     QGridLayout, QSizePolicy, QFrame, QSystemTrayIcon, QMenu,
-    QLayout, QFileDialog,
+    QLayout, QFileDialog, QDialog, QMessageBox,
 )
 
 import api_client
+import settings as app_settings
 from config import APP_NAME
+from ui.chat_dialog import ChatDialog
 
 SUBCATEGORIES = {
     "Other": ["Configuration Issue", "General Request", "Other"],
@@ -130,12 +132,14 @@ def build_tray_icon() -> QIcon:
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, client_id: str, hostname: str, ip_address: str, sys_username: str):
+    def __init__(self, client_id: str, hostname: str, ip_address: str, sys_username: str,
+                 tray_available: bool = True):
         super().__init__()
         self._client_id    = client_id
         self._hostname     = hostname
         self._ip_address   = ip_address
         self._sys_username = sys_username
+        self._tray_available = tray_available
 
         self._selected_category:    Optional[str] = None
         self._selected_subcategory: Optional[str] = None
@@ -143,6 +147,7 @@ class MainWindow(QMainWindow):
         self._subcat_buttons:   dict = {}
         self._attachment_path:  Optional[str] = None
         self._close_hint_shown = False
+        self._chat_dialog = None
 
         self._setup_window()
         self._setup_tray()
@@ -163,6 +168,13 @@ class MainWindow(QMainWindow):
         self.move((screen.width()-540)//2, (screen.height()-720)//2)
 
     def _setup_tray(self):
+        # If the desktop environment has no system tray (some Linux setups,
+        # locked-down kiosks, certain remote sessions) creating the tray icon
+        # silently does nothing — and hiding the window on close would make the
+        # app "disappear" with no way back. Guard against that here.
+        if not self._tray_available:
+            self._tray = None
+            return
         self._tray = QSystemTrayIcon(build_tray_icon(), self)
         self._tray.setToolTip(APP_NAME)
         self._tray_menu = QMenu()
@@ -514,9 +526,27 @@ class MainWindow(QMainWindow):
 
     def _build_footer(self):
         f = QWidget(); f.setObjectName("footer")
-        l = QVBoxLayout(f); l.setContentsMargins(0,8,0,0); l.setSpacing(2)
+        l = QVBoxLayout(f); l.setContentsMargins(0,8,0,0); l.setSpacing(4)
+
+        # Live support + settings row
+        action_row = QHBoxLayout(); action_row.setSpacing(6)
+        self._chat_btn = QPushButton("💬  Live Chat with IT")
+        self._chat_btn.setObjectName("chatBtn")
+        self._chat_btn.setFixedHeight(34)
+        self._chat_btn.clicked.connect(self._open_chat)
+        action_row.addWidget(self._chat_btn)
+        settings_btn = QPushButton("⚙")
+        settings_btn.setObjectName("settingsBtn")
+        settings_btn.setFixedSize(34, 34)
+        settings_btn.setToolTip("Server settings")
+        settings_btn.clicked.connect(self._open_settings)
+        action_row.addWidget(settings_btn)
+        l.addLayout(action_row)
 
         top_row = QHBoxLayout()
+        self._conn_label = QLabel("● Connecting…")
+        self._conn_label.setStyleSheet("color:#94A3B8;font-size:10px")
+        top_row.addWidget(self._conn_label)
         self._pending_label = QLabel()
         self._pending_label.setObjectName("pendingLabel")
         self._pending_label.setVisible(False)
@@ -528,11 +558,50 @@ class MainWindow(QMainWindow):
         top_row.addWidget(cid)
         l.addLayout(top_row)
 
-        dev = QLabel("IT Ticketing System v1.0")
+        dev = QLabel("IT Ticketing System")
         dev.setObjectName("devCredit")
         dev.setAlignment(Qt.AlignCenter)
         l.addWidget(dev)
         return f
+
+    # ── Live chat + settings ────────────────────────────
+    def _open_chat(self):
+        if not app_settings.is_configured():
+            QMessageBox.warning(self, "Not configured",
+                                "The server address is not set. Open ⚙ Settings first.")
+            return
+        avail = api_client.chat_availability()
+        if not avail.get("live_support_available"):
+            QMessageBox.information(
+                self, "Live chat unavailable",
+                "No IT agents are available for live chat right now.\n"
+                "Please submit a ticket and we'll get back to you.")
+            return
+        if self._chat_dialog is not None and self._chat_dialog.isVisible():
+            self._chat_dialog.raise_(); self._chat_dialog.activateWindow(); return
+        display = self._name_input.text().strip() or self._sys_username
+        self._chat_dialog = ChatDialog(self._client_id, display, self._hostname, self)
+        self._chat_dialog.show()
+
+    def _open_settings(self):
+        current = app_settings.get_server_url()
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Server Settings")
+        dlg.setMinimumWidth(360)
+        v = QVBoxLayout(dlg)
+        v.addWidget(QLabel("Server address (e.g. http://192.168.1.50:8000):"))
+        inp = QLineEdit(current)
+        v.addWidget(inp)
+        row = QHBoxLayout(); row.addStretch()
+        cancel = QPushButton("Cancel"); cancel.clicked.connect(dlg.reject)
+        save = QPushButton("Save"); save.setObjectName("submitBtn")
+        def _save():
+            app_settings.set_server_url(inp.text().strip())
+            dlg.accept()
+        save.clicked.connect(_save)
+        row.addWidget(cancel); row.addWidget(save)
+        v.addLayout(row)
+        dlg.exec()
 
     # ── Form logic ──────────────────────────────────────
     def _on_submit(self):
@@ -620,34 +689,49 @@ class MainWindow(QMainWindow):
             self._pending_label.setVisible(False)
 
     # ── Notifications ────────────────────────────────────
+    def _tray_message(self, title, body):
+        if self._tray is not None:
+            self._tray.showMessage(title, body, QSystemTrayIcon.MessageIcon.Information, 6000)
+
     def show_tray_notification(self, ticket_id: str):
-        self._tray.showMessage(
-            "Ticket Resolved ✓",
-            f"Your ticket {ticket_id} has been resolved by IT.",
-            QSystemTrayIcon.MessageIcon.Information, 6000,
-        )
+        self._tray_message("Ticket Resolved ✓",
+                           f"Your ticket {ticket_id} has been resolved by IT.")
 
     def show_inprogress_notification(self, ticket_id: str):
-        self._tray.showMessage(
-            "Ticket In Progress",
-            f"IT Support is working on your ticket {ticket_id}.",
-            QSystemTrayIcon.MessageIcon.Information, 6000,
-        )
+        self._tray_message("Ticket In Progress",
+                           f"IT Support is working on your ticket {ticket_id}.")
 
     def update_queue_display(self, count: int):
         self._update_pending_label(count)
 
-    # ── Close: hide to tray, keep running ────────────────
+    def update_connection_status(self, connected: bool):
+        if not hasattr(self, "_conn_label"):
+            return
+        if connected:
+            self._conn_label.setText("● Connected")
+            self._conn_label.setStyleSheet("color:#059669;font-size:10px")
+        else:
+            self._conn_label.setText("● Offline — retrying")
+            self._conn_label.setStyleSheet("color:#DC2626;font-size:10px")
+
+    # ── Close: hide to tray (if available), else minimise ─
     def closeEvent(self, event):
         event.ignore()
-        self.hide()
-        if not self._close_hint_shown:
-            self._close_hint_shown = True
-            if sys.platform == "darwin":
-                tip = "Running in background. You'll be notified when your ticket status changes. Click the menu bar icon to reopen."
-            else:
-                tip = "Running in background. You'll be notified when your ticket status changes. Right-click the tray icon to reopen."
-            self._tray.showMessage(APP_NAME, tip, QSystemTrayIcon.MessageIcon.Information, 4000)
+        if self._tray is not None:
+            self.hide()
+            if not self._close_hint_shown:
+                self._close_hint_shown = True
+                if sys.platform == "darwin":
+                    tip = ("Running in background. You'll be notified when your ticket "
+                           "status changes. Click the menu bar icon to reopen.")
+                else:
+                    tip = ("Running in background. You'll be notified when your ticket "
+                           "status changes. Right-click the tray icon to reopen.")
+                self._tray_message(APP_NAME, tip)
+        else:
+            # No system tray — minimise instead of hiding so the app never
+            # vanishes with no way to bring it back.
+            self.showMinimized()
 
 
 # ── Global stylesheet ───────────────────────────────────
@@ -743,6 +827,17 @@ QPushButton#anotherBtn {
     border:1px solid #2563EB; border-radius:8px; font-size:13px;
 }
 QPushButton#anotherBtn:hover { background:#EFF6FF; }
+
+QPushButton#chatBtn {
+    background:#EFF6FF; color:#1D4ED8; border:1px solid #BFDBFE;
+    border-radius:8px; font-size:13px; font-weight:600;
+}
+QPushButton#chatBtn:hover { background:#DBEAFE; border-color:#2563EB; }
+QPushButton#settingsBtn {
+    background:#F8FAFC; color:#475569; border:1px solid #E2E8F0;
+    border-radius:8px; font-size:15px;
+}
+QPushButton#settingsBtn:hover { background:#EFF6FF; border-color:#2563EB; }
 
 QFrame#divider { border:none; border-top:1px solid #E2E8F0; }
 QLabel#pendingLabel  { color:#B45309; font-size:11px; }
