@@ -3,5 +3,6 @@ SERVER_URL = "http://YOUR_SERVER_IP:8000"
 # Example: SERVER_URL = "http://192.168.1.50:8000"
 
 APP_NAME = "IT Ticketing System — Tech Support"
+CLIENT_VERSION = "1.0.0"  # bump this when you build a new client release
 POLL_INTERVAL_MS = 30000   # 30 seconds — notification polling
 QUEUE_RETRY_MS   = 60000   # 60 seconds — offline queue retry

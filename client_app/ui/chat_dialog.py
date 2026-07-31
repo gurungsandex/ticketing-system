@@ -15,13 +15,15 @@ import api_client
 
 
 class ChatDialog(QDialog):
-    def __init__(self, client_id: str, display_name: str, hostname: str, parent=None):
+    def __init__(self, client_id: str, display_name: str, hostname: str, parent=None,
+                 agents_available: bool = True):
         super().__init__(parent)
         self._client_id = client_id
         self._display_name = display_name
         self._hostname = hostname
         self._session_id = None
         self._last_id = 0
+        self._agents_available = agents_available
 
         self.setWindowTitle("Live Chat with IT Support")
         self.setMinimumSize(420, 520)
@@ -118,8 +120,16 @@ class ChatDialog(QDialog):
             return
         self._session_id = session["id"]
         if session.get("status") == "waiting":
-            self._status.setText("Waiting for an agent…")
-            self._add_bubble("system", "", "You're in the queue. An agent will be with you shortly.")
+            if self._agents_available:
+                self._status.setText("Waiting for an agent…")
+                self._add_bubble("system", "", "You're in the queue. An agent will be with you shortly.")
+            else:
+                self._status.setText("No agents online")
+                self._add_bubble(
+                    "system", "",
+                    "Our team is offline right now — go ahead and leave a message. "
+                    "We'll reply as soon as someone's back online.",
+                )
         else:
             self._status.setText("Connected")
         self._poll()

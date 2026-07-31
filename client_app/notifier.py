@@ -1,6 +1,14 @@
 from PySide6.QtCore import QObject, QThread, QTimer, Signal
 
 import api_client
+from config import CLIENT_VERSION
+
+
+def _version_tuple(v: str):
+    try:
+        return tuple(int(p) for p in v.strip().split("."))
+    except Exception:
+        return (0,)
 
 
 class NotifierWorker(QObject):
@@ -8,16 +16,20 @@ class NotifierWorker(QObject):
     ticket_in_progress = Signal(str)   # ticket_id
     queue_size_changed = Signal(int)
     connection_changed = Signal(bool)  # True = server reachable
+    update_available   = Signal(dict)  # {latest_version, download_url, release_notes, mandatory}
 
     def __init__(self, client_id: str, poll_interval_ms: int, queue_retry_ms: int):
         super().__init__()
         self._client_id = client_id
         self._poll_interval_ms = poll_interval_ms
         self._queue_retry_ms = queue_retry_ms
+        self._version_check_interval_ms = 24 * 60 * 60 * 1000  # once a day is plenty
         self._last_known: dict = {}   # ticket_id -> status string
         self._last_connected = None
+        self._version_notified = False
         self._poll_timer: QTimer = None
         self._queue_timer: QTimer = None
+        self._version_timer: QTimer = None
 
     def start_timers(self):
         self._poll_timer = QTimer()
@@ -30,9 +42,26 @@ class NotifierWorker(QObject):
         self._queue_timer.timeout.connect(self._flush_queue)
         self._queue_timer.start()
 
+        self._version_timer = QTimer()
+        self._version_timer.setInterval(self._version_check_interval_ms)
+        self._version_timer.timeout.connect(self._check_client_version)
+        self._version_timer.start()
+
         # Run once immediately on startup
         self._poll()
         self._flush_queue()
+        self._check_client_version()
+
+    def _check_client_version(self):
+        if self._version_notified:
+            return
+        info = api_client.get_client_version()
+        latest = info.get("latest_version")
+        if not latest:
+            return
+        if _version_tuple(latest) > _version_tuple(CLIENT_VERSION):
+            self._version_notified = True
+            self.update_available.emit(info)
 
     def _emit_connection(self, connected: bool):
         if connected != self._last_connected:
@@ -83,6 +112,10 @@ class Notifier:
     @property
     def connection_changed(self):
         return self._worker.connection_changed
+
+    @property
+    def update_available(self):
+        return self._worker.update_available
 
     def start(self):
         self._thread.start()

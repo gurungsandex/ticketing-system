@@ -171,3 +171,25 @@ def close_chat(session_id: str, client_id: str) -> bool:
         return True
     except Exception:
         return False
+
+
+# ── Branding / desktop client version ─────────────────
+
+def get_branding_logo_bytes() -> Optional[bytes]:
+    """Best-effort fetch of the admin-configured logo. Returns None if unset/unreachable."""
+    try:
+        r = requests.get(f"{_base()}/branding/logo", timeout=2)
+        if r.status_code != 200:
+            return None
+        return r.content
+    except Exception:
+        return None
+
+
+def get_client_version() -> dict:
+    try:
+        r = requests.get(f"{_base()}/client/version", timeout=5)
+        r.raise_for_status()
+        return r.json()
+    except Exception:
+        return {}

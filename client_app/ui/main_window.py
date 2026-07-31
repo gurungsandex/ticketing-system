@@ -2,9 +2,9 @@ import sys
 import os
 from typing import Optional
 
-from PySide6.QtCore import Qt, QRect, QPoint, QSize, QMimeData
+from PySide6.QtCore import Qt, QRect, QPoint, QSize, QMimeData, QUrl
 from PySide6.QtGui import (
-    QColor, QPainter, QBrush, QPen, QFont, QIcon, QPixmap,
+    QColor, QPainter, QBrush, QPen, QFont, QIcon, QPixmap, QDesktopServices,
     QDragEnterEvent, QDropEvent,
 )
 from PySide6.QtWidgets import (
@@ -116,7 +116,22 @@ class FlowWidget(QWidget):
             self.setMinimumHeight(h)
 
 
+def load_branding_pixmap(size: int = 32) -> Optional[QPixmap]:
+    """Best-effort fetch of the admin-configured logo. Returns None if unset/unreachable
+    so callers can fall back to the default drawn icon/emoji."""
+    data = api_client.get_branding_logo_bytes()
+    if not data:
+        return None
+    px = QPixmap()
+    if not px.loadFromData(data):
+        return None
+    return px.scaled(size, size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+
+
 def build_tray_icon() -> QIcon:
+    custom = load_branding_pixmap(32)
+    if custom is not None:
+        return QIcon(custom)
     px = QPixmap(32, 32)
     px.fill(Qt.transparent)
     p = QPainter(px)
@@ -324,7 +339,12 @@ class MainWindow(QMainWindow):
     def _build_header(self):
         h = QWidget(); h.setObjectName("headerBar"); h.setFixedHeight(60)
         lay = QHBoxLayout(h); lay.setContentsMargins(18, 0, 18, 0)
-        icon = QLabel("🎫"); icon.setObjectName("headerIcon")
+        logo = load_branding_pixmap(28)
+        if logo is not None:
+            icon = QLabel(); icon.setPixmap(logo)
+        else:
+            icon = QLabel("🎫")
+        icon.setObjectName("headerIcon")
         tw = QWidget()
         tl = QVBoxLayout(tw); tl.setContentsMargins(8,0,0,0); tl.setSpacing(0)
         l1 = QLabel("IT Ticketing System"); l1.setObjectName("headerLine1")
@@ -570,17 +590,17 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Not configured",
                                 "The server address is not set. Open ⚙ Settings first.")
             return
+        # Chat is always reachable — if nobody's online, the dialog itself
+        # tells the user so and lets them leave a message anyway; we never
+        # block them from starting a conversation.
         avail = api_client.chat_availability()
-        if not avail.get("live_support_available"):
-            QMessageBox.information(
-                self, "Live chat unavailable",
-                "No IT agents are available for live chat right now.\n"
-                "Please submit a ticket and we'll get back to you.")
-            return
         if self._chat_dialog is not None and self._chat_dialog.isVisible():
             self._chat_dialog.raise_(); self._chat_dialog.activateWindow(); return
         display = self._name_input.text().strip() or self._sys_username
-        self._chat_dialog = ChatDialog(self._client_id, display, self._hostname, self)
+        self._chat_dialog = ChatDialog(
+            self._client_id, display, self._hostname, self,
+            agents_available=bool(avail.get("live_support_available")),
+        )
         self._chat_dialog.show()
 
     def _open_settings(self):
@@ -703,6 +723,24 @@ class MainWindow(QMainWindow):
 
     def update_queue_display(self, count: int):
         self._update_pending_label(count)
+
+    def show_update_available(self, info: dict):
+        version = info.get("latest_version", "?")
+        notes = info.get("release_notes") or "No release notes provided."
+        url = info.get("download_url") or ""
+        mandatory = bool(info.get("mandatory"))
+
+        box = QMessageBox(self)
+        box.setWindowTitle("Update Available")
+        box.setIcon(QMessageBox.Icon.Information)
+        box.setText(f"A new version (v{version}) of this app is available.")
+        box.setInformativeText(notes)
+        update_btn = box.addButton("Update Now", QMessageBox.ButtonRole.AcceptRole)
+        if not mandatory:
+            box.addButton("Remind Me Later", QMessageBox.ButtonRole.RejectRole)
+        box.exec()
+        if box.clickedButton() is update_btn and url:
+            QDesktopServices.openUrl(QUrl(url))
 
     def update_connection_status(self, connected: bool):
         if not hasattr(self, "_conn_label"):

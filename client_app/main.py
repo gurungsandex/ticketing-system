@@ -144,6 +144,7 @@ def main():
     notifier.ticket_in_progress.connect(window.show_inprogress_notification)
     notifier.queue_size_changed.connect(window.update_queue_display)
     notifier.connection_changed.connect(window.update_connection_status)
+    notifier.update_available.connect(window.show_update_available)
     notifier.start()
 
     code = app.exec()
