@@ -17,6 +17,7 @@ from auth import get_current_admin, require_super_admin
 from database import get_db
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from services import kb_analysis
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from utils import utcnow
 
@@ -87,8 +88,11 @@ def list_articles(
         q = q.filter(models.KBArticle.workflow_status == status)
     if category:
         q = q.filter(models.KBArticle.category == category)
-    return q.order_by(models.KBArticle.updated_at.desc().nullslast(),
-                      models.KBArticle.created_at.desc()).all()
+    # coalesce(updated_at, created_at) is portable across all SQLite versions
+    # (NULLS LAST requires SQLite >= 3.30, which older corporate hosts may lack).
+    return q.order_by(
+        func.coalesce(models.KBArticle.updated_at, models.KBArticle.created_at).desc()
+    ).all()
 
 
 @router.get("/kb/articles/{article_id}", response_model=schemas.KBArticleResponse)
