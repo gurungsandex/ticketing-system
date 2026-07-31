@@ -14,8 +14,10 @@ ignore = [
     "E501",   # line too long — handled per-file where needed
     "UP007",  # Use X | Y for type hints — Optional[] still clearer for Python 3.10 compat
     "UP006",  # Use type instead of Type — same reason
+    "UP045",  # Use X | None — Optional[] still clearer for Python 3.10 compat (same as UP007)
+    "UP035",  # deprecated typing import — typing.List/Optional kept for readability/3.10
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"scripts/*" = ["I"]          # seed script — import order not critical
+"scripts/*" = ["I", "E402"]  # seed script manipulates sys.path before imports
 "client_app/*" = ["I", "E"]  # Qt UI code has intentional compact style

@@ -1,12 +1,11 @@
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-
 import models
 import schemas
+from auth import hash_password, require_super_admin
 from database import get_db
-from auth import get_current_admin, require_super_admin, hash_password
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
 
 router = APIRouter()
 

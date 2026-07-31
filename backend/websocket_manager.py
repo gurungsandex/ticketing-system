@@ -50,5 +50,35 @@ class ConnectionManager:
             await self.push(username, payload)
 
 
-# Singleton — imported by main.py and routers
+class TopicManager:
+    """Broadcast manager keyed by an arbitrary topic string (e.g. a chat
+    session id). Any number of participants may subscribe to a topic and every
+    message published to it is delivered to all of them."""
+
+    def __init__(self):
+        self._topics: Dict[str, List[WebSocket]] = {}
+
+    async def subscribe(self, websocket: WebSocket, topic: str) -> None:
+        await websocket.accept()
+        self._topics.setdefault(topic, []).append(websocket)
+
+    def unsubscribe(self, websocket: WebSocket, topic: str) -> None:
+        conns = self._topics.get(topic, [])
+        self._topics[topic] = [ws for ws in conns if ws is not websocket]
+        if not self._topics[topic]:
+            self._topics.pop(topic, None)
+
+    async def publish(self, topic: str, payload: dict) -> None:
+        dead: List[WebSocket] = []
+        for ws in list(self._topics.get(topic, [])):
+            try:
+                await ws.send_json(payload)
+            except Exception:
+                dead.append(ws)
+        for ws in dead:
+            self.unsubscribe(ws, topic)
+
+
+# Singletons — imported by main.py and routers
 ws_manager = ConnectionManager()
+chat_hub = TopicManager()

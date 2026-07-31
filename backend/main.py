@@ -1,6 +1,6 @@
 """
-IT Ticketing System — Backend v1.0
-====================================
+IT Ticketing System — Backend
+=============================
 Run directly (development):
     cd backend
     uvicorn main:app --host 0.0.0.0 --port 8000
@@ -9,32 +9,43 @@ Run via setup script (background):
     Windows : setup.bat        (from project root)
     macOS   : ./setup.sh       (from project root)
 """
-import os
 import logging
-from dotenv import load_dotenv
-load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env'))
+import os
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Union
 
-from fastapi import FastAPI, Depends, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, FileResponse
-from sqlalchemy.orm import Session
+from dotenv import load_dotenv
 
-from database import engine, get_db, SessionLocal
-import models
-import schemas
-from auth import hash_password, verify_password, create_access_token, get_current_admin
-from routers import tickets, admin, notifications, update
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "..", ".env"))
+
+import config  # noqa: E402
+import models  # noqa: E402
+import schemas  # noqa: E402
+from auth import (  # noqa: E402
+    create_access_token,
+    get_current_admin,
+    hash_password,
+    verify_password,
+)
+from database import SessionLocal, engine, get_db  # noqa: E402
+from fastapi import Depends, FastAPI, HTTPException, Request  # noqa: E402
+from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
+from fastapi.responses import FileResponse, HTMLResponse  # noqa: E402
+from migrations import run_migrations  # noqa: E402
+from routers import admin, chat, knowledge, notifications, tickets, update  # noqa: E402
+from security import SecurityHeadersMiddleware, rate_limit  # noqa: E402
+from sqlalchemy.orm import Session  # noqa: E402
+from utils import utcnow  # noqa: E402
 
 # ── Logging ───────────────────────────────────────────
 logging.basicConfig(level=logging.WARNING)
 logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
 logging.getLogger("apscheduler").setLevel(logging.WARNING)
 
-# ── Tables ────────────────────────────────────────────
+# ── Tables + migrations ───────────────────────────────
 models.Base.metadata.create_all(bind=engine)
+run_migrations(engine)
 
 # ── Static HTML paths ─────────────────────────────────
 _BASE       = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -52,10 +63,9 @@ def _serve_html(path: str, label: str) -> Union[FileResponse, HTMLResponse]:
     )
 
 
-# ── Lifespan (replaces deprecated @app.on_event) ──────
+# ── Lifespan ──────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(application: FastAPI):
-    # ── Startup ──────────────────────────────────────
     db = SessionLocal()
     try:
         if not db.query(models.AdminUser).filter(
@@ -73,78 +83,95 @@ async def lifespan(application: FastAPI):
 
     from apscheduler.schedulers.background import BackgroundScheduler
     scheduler = BackgroundScheduler(daemon=True)
-    scheduler.add_job(_cleanup_old_records, "cron", hour=2, minute=0)
+    if config.TICKET_RETENTION_DAYS > 0:
+        scheduler.add_job(_cleanup_old_records, "cron", hour=2, minute=0)
     scheduler.start()
 
-    _DEFAULT_KEY = "HELPDESK_SECRET_KEY_CHANGE_IN_PRODUCTION"
-    if os.environ.get("SECRET_KEY", _DEFAULT_KEY) == _DEFAULT_KEY:
+    if config.SECRET_KEY_AUTO_GENERATED:
         print("=" * 60)
-        print("[WARNING] SECRET_KEY is not set — using insecure default.")
-        print("  Generate a key:  python3 -c \"import secrets; print(secrets.token_hex(32))\"")
-        print("  Then set it:     export SECRET_KEY=<generated-key>")
-        print("  See docs/ADMIN_GUIDE.md for full instructions.")
+        print("[NOTICE] SECRET_KEY not set — using an auto-generated key")
+        print("  persisted to backend/secret.key (gitignored). Tokens survive")
+        print("  restarts. For multi-node or production, set SECRET_KEY in .env.")
         print("=" * 60)
 
-    _port = os.environ.get("PORT", "8000")
-    _host = os.environ.get("HOST", "0.0.0.0")
-    print("[OK] IT Ticketing System v1.0 ready")
-    print(f"   Admin:      http://{_host}:{_port}/admin")
-    print(f"   Technician: http://{_host}:{_port}/tech")
+    print(f"[OK] IT Ticketing System v{config.VERSION} ready")
+    print(f"   Admin:      http://{config.HOST}:{config.PORT}/admin")
+    print(f"   Technician: http://{config.HOST}:{config.PORT}/tech")
 
-    yield  # ← application runs here
+    yield
 
-    # ── Shutdown ─────────────────────────────────────
     scheduler.shutdown(wait=False)
 
 
 # ── App ───────────────────────────────────────────────
 app = FastAPI(
     title="IT Ticketing System",
-    version="1.0.0",
+    version=config.VERSION,
     docs_url="/api/docs",
     redoc_url=None,
     lifespan=lifespan,
 )
 
-# CORS — restrict to your server IP in production via env var
-_CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "*").split(",")
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=_CORS_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Security headers on every response.
+app.add_middleware(SecurityHeadersMiddleware)
+
+# CORS. "*" is incompatible with credentialed requests per the CORS spec, so
+# when all origins are allowed we must NOT also send allow_credentials=True.
+if config.CORS_ALLOW_ALL:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+else:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=config.CORS_ORIGINS,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 # ── Routers ───────────────────────────────────────────
 app.include_router(tickets.router)
 app.include_router(admin.router)
 app.include_router(notifications.router)
+app.include_router(chat.router)
+app.include_router(knowledge.router)
 app.include_router(update.router)
+
 
 # ── Static routes ─────────────────────────────────────
 @app.get("/", include_in_schema=False)
 def root():
     return HTMLResponse("<meta http-equiv='refresh' content='0; url=/admin'>", status_code=302)
 
+
 @app.get("/admin",  include_in_schema=False)
 @app.get("/admin/", include_in_schema=False)
 def serve_admin():
     return _serve_html(_ADMIN_HTML, "Admin")
+
 
 @app.get("/tech",  include_in_schema=False)
 @app.get("/tech/", include_in_schema=False)
 def serve_tech():
     return _serve_html(_TECH_HTML, "Technician")
 
+
 # ── Health ────────────────────────────────────────────
 @app.get("/health")
 def health():
-    return {"status": "ok", "version": "1.0.0"}
+    return {"status": "ok", "version": config.VERSION}
+
 
 # ── Auth ──────────────────────────────────────────────
 @app.post("/auth/login", response_model=schemas.LoginResponse)
-def login(body: schemas.LoginRequest, db: Session = Depends(get_db)):
+def login(body: schemas.LoginRequest, request: Request, db: Session = Depends(get_db)):
+    # Throttle brute-force attempts per client IP.
+    rate_limit(request, "login", config.RATE_LIMIT_LOGIN)
     user = db.query(models.AdminUser).filter(
         models.AdminUser.username == body.username
     ).first()
@@ -157,6 +184,7 @@ def login(body: schemas.LoginRequest, db: Session = Depends(get_db)):
         role=user.role,
         username=user.username,
     )
+
 
 @app.patch("/auth/change-password")
 def change_password(
@@ -175,8 +203,11 @@ def change_password(
 
 # ── Scheduled cleanup ─────────────────────────────────
 def _cleanup_old_records():
-    """Delete tickets, notes, attachments, and notifications older than 30 days."""
-    cutoff = datetime.utcnow() - timedelta(days=30)
+    """Delete tickets, notes, attachments, and notifications older than the
+    configured retention window. Disabled entirely when retention is 0."""
+    if config.TICKET_RETENTION_DAYS <= 0:
+        return
+    cutoff = utcnow() - timedelta(days=config.TICKET_RETENTION_DAYS)
     db = SessionLocal()
     try:
         old = db.query(models.Ticket).filter(models.Ticket.created_at < cutoff).all()
@@ -189,7 +220,8 @@ def _cleanup_old_records():
         ).delete()
         db.commit()
         if old:
-            print(f"[cleanup] Removed {len(old)} tickets older than 30 days.")
+            print(f"[cleanup] Removed {len(old)} tickets older than "
+                  f"{config.TICKET_RETENTION_DAYS} days.")
     except Exception as e:
         db.rollback()
         print(f"[cleanup] Error: {e}")

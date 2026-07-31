@@ -1,32 +1,65 @@
-from datetime import datetime, date
-from typing import Optional, List
+import time
+from datetime import date, datetime
+from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
-from fastapi.responses import Response
-from sqlalchemy.orm import Session
-
+import config
 import models
 import schemas
+from auth import get_current_admin, require_admin_or_assigned, require_super_admin
 from database import get_db
-from auth import get_current_admin, require_super_admin, require_admin_or_assigned
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
+from fastapi.responses import Response
+from security import ALLOWED_MIMES, detect_content_type, rate_limit
+from sqlalchemy import update
+from sqlalchemy.exc import IntegrityError, OperationalError
+from sqlalchemy.orm import Session
+from utils import utcnow
 from websocket_manager import ws_manager
 
 router = APIRouter()
 
-ALLOWED_MIMES = {
-    "image/png", "image/jpeg", "image/jpg", "image/gif",
-    "image/webp", "image/bmp", "application/pdf",
+MAX_SIZE = config.MAX_UPLOAD_BYTES
+
+VALID_CATEGORIES = {
+    "Other", "Computer / Workstation", "Network / Internet / WiFi",
+    "Printer", "Scanner", "Phone / VoIP", "Browser",
+    "Software / Application", "Email", "VPN / Remote Access",
+    "Hardware", "File Access / Permissions", "Performance Issues",
+    "Password / Account", "Monitor / Display",
 }
-MAX_SIZE = 10 * 1024 * 1024  # 10 MB
+VALID_PRIORITIES = {"low", "normal", "high", "urgent"}
+VALID_STATUSES = {"active", "in_progress", "resolved"}
 
 
 # ── Helpers ───────────────────────────────────────────
 
-def generate_ticket_id(db: Session) -> str:
-    today = date.today().strftime("%Y%m%d")
-    prefix = f"TKT-{today}-"
-    count = db.query(models.Ticket).filter(models.Ticket.id.like(f"{prefix}%")).count()
-    return f"{prefix}{count + 1:04d}"
+def _next_ticket_seq(db: Session, date_key: str) -> int:
+    """Atomically obtain the next per-day sequence number.
+
+    The increment is done with a single ``UPDATE ... last_seq = last_seq + 1``
+    statement evaluated by the database under its write lock, so the result is
+    never derived from a stale in-memory read — two concurrent callers always
+    receive distinct values. The counter row is created lazily on the first
+    ticket of the day; a race there surfaces as an IntegrityError that the
+    caller retries.
+    """
+    result = db.execute(
+        update(models.TicketCounter)
+        .where(models.TicketCounter.date_key == date_key)
+        .values(last_seq=models.TicketCounter.last_seq + 1)
+    )
+    if result.rowcount == 0:
+        # No counter row for today yet — create it. If a concurrent request
+        # created it first, this raises IntegrityError and the caller retries.
+        db.add(models.TicketCounter(date_key=date_key, last_seq=1))
+        db.flush()
+        return 1
+    seq = db.execute(
+        db.query(models.TicketCounter.last_seq)
+        .filter(models.TicketCounter.date_key == date_key)
+        .statement
+    ).scalar_one()
+    return seq
 
 
 def _create_notification(
@@ -46,35 +79,79 @@ def _create_notification(
     return notif
 
 
+def _staff_recipients(db: Session, ticket: models.Ticket, exclude: Optional[str] = None) -> set:
+    recipients = set()
+    if ticket.assigned_to:
+        recipients.add(ticket.assigned_to)
+    for a in db.query(models.AdminUser).filter(models.AdminUser.role == "super_admin").all():
+        recipients.add(a.username)
+    recipients.discard(exclude)
+    return recipients
+
+
 # ── PUBLIC: Create ticket ─────────────────────────────
 
 @router.post("/tickets/", response_model=schemas.TicketCreateResponse)
-def create_ticket(payload: schemas.TicketCreate, db: Session = Depends(get_db)):
-    valid_categories = {
-        "Other", "Computer / Workstation", "Network / Internet / WiFi",
-        "Printer", "Scanner", "Phone / VoIP", "Browser",
-        "Software / Application", "Email", "VPN / Remote Access",
-        "Hardware", "File Access / Permissions", "Performance Issues",
-    }
-    if payload.category not in valid_categories:
+def create_ticket(payload: schemas.TicketCreate, request: Request, db: Session = Depends(get_db)):
+    rate_limit(request, "ticket_create", config.RATE_LIMIT_TICKET_CREATE)
+
+    if payload.category not in VALID_CATEGORIES:
         raise HTTPException(status_code=400, detail=f"Invalid category: {payload.category}")
 
-    ticket = models.Ticket(
-        id=generate_ticket_id(db),
-        client_id=payload.client_id,
-        username=payload.username or "",
-        ip_address=payload.ip_address,
-        hostname=payload.hostname,
-        category=payload.category,
-        sub_category=payload.sub_category or "",
-        description=payload.description or "",
-        status="active",
-        created_at=datetime.utcnow(),
-        updated_at=None,
-    )
-    db.add(ticket)
+    priority = (payload.priority or "normal").lower()
+    if priority not in VALID_PRIORITIES:
+        priority = "normal"
+
+    description = (payload.description or "")[: config.MAX_DESCRIPTION_LEN]
+
+    # Reserve a unique ticket number and insert atomically. Retry on the rare
+    # counter-row race (IntegrityError) or a transient SQLite lock timeout
+    # (OperationalError), with a small backoff so contending writers stagger.
+    last_error: Optional[Exception] = None
+    ticket = None
+    for attempt in range(10):
+        try:
+            date_key = date.today().strftime("%Y%m%d")
+            seq = _next_ticket_seq(db, date_key)
+            ticket = models.Ticket(
+                id=f"TKT-{date_key}-{seq:04d}",
+                client_id=payload.client_id,
+                username=payload.username or "",
+                ip_address=payload.ip_address,
+                hostname=payload.hostname,
+                category=payload.category,
+                sub_category=payload.sub_category or "",
+                description=description,
+                priority=priority,
+                department=(payload.department or None),
+                location=(payload.location or None),
+                device=(payload.device or None),
+                status="active",
+                created_at=utcnow(),
+                updated_at=None,
+            )
+            db.add(ticket)
+            db.commit()
+            db.refresh(ticket)
+            break
+        except (IntegrityError, OperationalError) as exc:
+            last_error = exc
+            db.rollback()
+            time.sleep(0.02 * (attempt + 1))
+    if ticket is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Could not allocate a ticket number. Please try again.",
+        ) from last_error
+
+    # Notify staff about the new ticket (urgent/high get flagged).
+    flag = "🔴 " if priority in ("high", "urgent") else ""
+    msg = f"{flag}New {priority} ticket {ticket.id} — {ticket.category}"
+    for admin in db.query(models.AdminUser).filter(
+        models.AdminUser.role == "super_admin"
+    ).all():
+        _create_notification(db, admin.username, ticket.id, "new_ticket", msg)
     db.commit()
-    db.refresh(ticket)
     return ticket
 
 
@@ -83,31 +160,45 @@ def create_ticket(payload: schemas.TicketCreate, db: Session = Depends(get_db)):
 @router.post("/tickets/{ticket_id}/attachments")
 async def upload_attachment(
     ticket_id: str,
+    request: Request,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
+    rate_limit(request, "attachment", config.RATE_LIMIT_ATTACHMENT)
+
     if not db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first():
         raise HTTPException(status_code=404, detail="Ticket not found")
 
-    mime = file.content_type or ""
-    if mime not in ALLOWED_MIMES:
-        raise HTTPException(status_code=400,
-            detail="File type not allowed. Use PNG, JPG, GIF, WEBP, BMP, or PDF.")
+    claimed_mime = file.content_type or ""
+    if claimed_mime not in ALLOWED_MIMES:
+        raise HTTPException(
+            status_code=400,
+            detail="File type not allowed. Use PNG, JPG, GIF, WEBP, BMP, or PDF.",
+        )
 
     data = await file.read()
     if len(data) > MAX_SIZE:
         raise HTTPException(status_code=400, detail="File too large. Max 10 MB.")
+    if not data:
+        raise HTTPException(status_code=400, detail="Empty file.")
 
-    # Sanitise filename — strip path separators
-    safe_name = (file.filename or "attachment").replace("/", "_").replace("\\", "_")
+    # Verify the real content, not just the client-declared type.
+    real_mime = detect_content_type(data)
+    if real_mime is None:
+        raise HTTPException(
+            status_code=400,
+            detail="File content does not match an allowed image/PDF type.",
+        )
+
+    safe_name = (file.filename or "attachment").replace("/", "_").replace("\\", "_")[:255]
 
     att = models.Attachment(
         ticket_id=ticket_id,
         filename=safe_name,
-        mimetype=mime,
+        mimetype=real_mime,
         size_bytes=len(data),
         data=data,
-        created_at=datetime.utcnow(),
+        created_at=utcnow(),
     )
     db.add(att)
     db.commit()
@@ -117,10 +208,26 @@ async def upload_attachment(
 
 # ── STAFF: List all tickets ───────────────────────────
 
+def _to_detail(db: Session, t: models.Ticket) -> schemas.TicketDetail:
+    nc = db.query(models.Note).filter(models.Note.ticket_id == t.id).count()
+    return schemas.TicketDetail(
+        id=t.id, client_id=t.client_id, username=t.username,
+        ip_address=t.ip_address, hostname=t.hostname,
+        category=t.category, sub_category=t.sub_category,
+        description=t.description, status=t.status,
+        priority=t.priority or "normal", department=t.department,
+        location=t.location, device=t.device,
+        resolution_summary=t.resolution_summary, resolved_at=t.resolved_at,
+        assigned_to=t.assigned_to, created_at=t.created_at,
+        updated_at=t.updated_at, notes_count=nc,
+    )
+
+
 @router.get("/tickets/", response_model=List[schemas.TicketDetail])
 def list_tickets(
     status:    Optional[str] = Query(None),
     category:  Optional[str] = Query(None),
+    priority:  Optional[str] = Query(None),
     date_from: Optional[str] = Query(None),
     date_to:   Optional[str] = Query(None),
     db: Session = Depends(get_db),
@@ -136,6 +243,8 @@ def list_tickets(
         q = q.filter(models.Ticket.status == status)
     if category:
         q = q.filter(models.Ticket.category == category)
+    if priority:
+        q = q.filter(models.Ticket.priority == priority)
     if date_from:
         try:
             q = q.filter(models.Ticket.created_at >= datetime.strptime(date_from, "%Y-%m-%d"))
@@ -149,18 +258,7 @@ def list_tickets(
             raise HTTPException(status_code=400, detail="Invalid date_to. Use YYYY-MM-DD")
 
     tickets = q.order_by(models.Ticket.created_at.desc()).all()
-    result = []
-    for t in tickets:
-        nc = db.query(models.Note).filter(models.Note.ticket_id == t.id).count()
-        result.append(schemas.TicketDetail(
-            id=t.id, client_id=t.client_id, username=t.username,
-            ip_address=t.ip_address, hostname=t.hostname,
-            category=t.category, sub_category=t.sub_category,
-            description=t.description, status=t.status,
-            assigned_to=t.assigned_to, created_at=t.created_at,
-            updated_at=t.updated_at, notes_count=nc,
-        ))
-    return result
+    return [_to_detail(db, t) for t in tickets]
 
 
 # ── STAFF: Get single ticket ──────────────────────────
@@ -174,20 +272,9 @@ def get_ticket(
     t = db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
     if not t:
         raise HTTPException(status_code=404, detail="Ticket not found")
-
-    # Technicians can only view their assigned tickets
     if current_user.role == "technician" and t.assigned_to != current_user.username:
         raise HTTPException(status_code=403, detail="You are not assigned to this ticket.")
-
-    nc = db.query(models.Note).filter(models.Note.ticket_id == ticket_id).count()
-    return schemas.TicketDetail(
-        id=t.id, client_id=t.client_id, username=t.username,
-        ip_address=t.ip_address, hostname=t.hostname,
-        category=t.category, sub_category=t.sub_category,
-        description=t.description, status=t.status,
-        assigned_to=t.assigned_to, created_at=t.created_at,
-        updated_at=t.updated_at, notes_count=nc,
-    )
+    return _to_detail(db, t)
 
 
 # ── RBAC: Update status (admin OR assigned technician) ─
@@ -199,42 +286,59 @@ async def update_status(
     db: Session = Depends(get_db),
     current_user: models.AdminUser = Depends(get_current_admin),
 ):
-    if body.status not in {"active", "in_progress", "resolved"}:
+    if body.status not in VALID_STATUSES:
         raise HTTPException(status_code=400, detail="Invalid status value")
 
     t = db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
     if not t:
         raise HTTPException(status_code=404, detail="Ticket not found")
 
-    # BACKEND RBAC — not frontend only
     require_admin_or_assigned(t.assigned_to, current_user)
 
     t.status = body.status
-    t.updated_at = datetime.utcnow()
+    t.updated_at = utcnow()
+    if body.status == "resolved":
+        t.resolved_at = utcnow()
+        if body.resolution_summary:
+            t.resolution_summary = body.resolution_summary[: config.MAX_DESCRIPTION_LEN]
     db.commit()
     db.refresh(t)
 
-    # Notify all relevant staff about status change
-    recipients = set()
-    if t.assigned_to:
-        recipients.add(t.assigned_to)
-    # Notify all admins
-    admins = db.query(models.AdminUser).filter(models.AdminUser.role == "super_admin").all()
-    for a in admins:
-        recipients.add(a.username)
-    recipients.discard(current_user.username)  # don't self-notify
-
+    recipients = _staff_recipients(db, t, exclude=current_user.username)
     msg = f"Ticket {ticket_id} status changed to '{body.status.replace('_', ' ')}' by {current_user.username}"
     for recipient in recipients:
         _create_notification(db, recipient, ticket_id, "status_changed", msg)
     db.commit()
 
-    # WebSocket push
     payload = {"type": "status_changed", "ticket_id": ticket_id,
                "status": body.status, "message": msg}
     await ws_manager.broadcast_to_users(list(recipients), payload)
 
     return {"id": t.id, "status": t.status, "updated_at": t.updated_at}
+
+
+# ── RBAC: Update priority (admin OR assigned technician) ─
+
+@router.patch("/tickets/{ticket_id}/priority")
+async def update_priority(
+    ticket_id: str,
+    body: schemas.TicketPriorityUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(get_current_admin),
+):
+    priority = (body.priority or "").lower()
+    if priority not in VALID_PRIORITIES:
+        raise HTTPException(status_code=400, detail="Invalid priority value")
+
+    t = db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
+    if not t:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    require_admin_or_assigned(t.assigned_to, current_user)
+
+    t.priority = priority
+    t.updated_at = utcnow()
+    db.commit()
+    return {"id": t.id, "priority": t.priority}
 
 
 # ── ADMIN ONLY: Assign ticket ─────────────────────────
@@ -244,13 +348,12 @@ async def assign_ticket(
     ticket_id: str,
     body: schemas.TicketAssignUpdate,
     db: Session = Depends(get_db),
-    _admin: models.AdminUser = Depends(require_super_admin),  # ADMIN ONLY
+    _admin: models.AdminUser = Depends(require_super_admin),
 ):
     t = db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
     if not t:
         raise HTTPException(status_code=404, detail="Ticket not found")
 
-    # Verify the assignee exists
     assignee = db.query(models.AdminUser).filter(
         models.AdminUser.username == body.assigned_to
     ).first()
@@ -258,15 +361,13 @@ async def assign_ticket(
         raise HTTPException(status_code=404, detail=f"User '{body.assigned_to}' not found")
 
     t.assigned_to = body.assigned_to
-    t.updated_at = datetime.utcnow()
+    t.updated_at = utcnow()
 
-    # Create notification for the assigned technician
-    msg = f"You have been assigned ticket {ticket_id} — {t.category}"
+    msg = f"You have been assigned ticket {ticket_id} — {t.category} ({t.priority or 'normal'} priority)"
     _create_notification(db, body.assigned_to, ticket_id, "assigned", msg)
     db.commit()
     db.refresh(t)
 
-    # WebSocket push
     payload = {"type": "assigned", "ticket_id": ticket_id, "message": msg}
     await ws_manager.push(body.assigned_to, payload)
 
@@ -282,32 +383,28 @@ async def add_note(
     db: Session = Depends(get_db),
     current_user: models.AdminUser = Depends(get_current_admin),
 ):
+    content = (body.content or "").strip()
+    if not content:
+        raise HTTPException(status_code=400, detail="Note cannot be empty.")
+    content = content[: config.MAX_NOTE_LEN]
+
     t = db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
     if not t:
         raise HTTPException(status_code=404, detail="Ticket not found")
 
-    # Technicians can only add notes to their assigned tickets
     if current_user.role == "technician" and t.assigned_to != current_user.username:
         raise HTTPException(status_code=403, detail="You are not assigned to this ticket.")
 
     note = models.Note(
         ticket_id=ticket_id,
         admin_username=current_user.username,
-        content=body.content,
-        created_at=datetime.utcnow(),
+        content=content,
+        created_at=utcnow(),
     )
     db.add(note)
 
-    # Notify: assigned technician + all admins (except the note author)
-    recipients = set()
-    if t.assigned_to:
-        recipients.add(t.assigned_to)
-    admins = db.query(models.AdminUser).filter(models.AdminUser.role == "super_admin").all()
-    for a in admins:
-        recipients.add(a.username)
-    recipients.discard(current_user.username)
-
-    preview = body.content[:60] + ("…" if len(body.content) > 60 else "")
+    recipients = _staff_recipients(db, t, exclude=current_user.username)
+    preview = content[:60] + ("…" if len(content) > 60 else "")
     msg = f"{current_user.username} added a note on {ticket_id}: \"{preview}\""
     for recipient in recipients:
         _create_notification(db, recipient, ticket_id, "comment_added", msg)
@@ -365,23 +462,16 @@ def get_attachments(
 def download_attachment(
     attachment_id: int,
     db: Session = Depends(get_db),
-    current_user: models.AdminUser = Depends(get_current_admin),  # accepts ?token= too
+    current_user: models.AdminUser = Depends(get_current_admin),
 ):
-    """
-    Secure file download with authentication.
-    Supports both Authorization header and ?token= query param so the
-    frontend fetch+blob approach and direct URL opens both work.
-    """
     a = db.query(models.Attachment).filter(models.Attachment.id == attachment_id).first()
     if not a:
         raise HTTPException(status_code=404, detail="Attachment not found")
 
-    # Verify caller has access to the parent ticket
     t = db.query(models.Ticket).filter(models.Ticket.id == a.ticket_id).first()
     if t and current_user.role == "technician" and t.assigned_to != current_user.username:
         raise HTTPException(status_code=403, detail="Access denied.")
 
-    # Sanitise filename for Content-Disposition header
     safe = a.filename.replace('"', '\\"').replace("\n", "").replace("\r", "")
     return Response(
         content=a.data,

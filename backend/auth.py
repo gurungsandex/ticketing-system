@@ -1,19 +1,19 @@
-import os
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Optional
 
 import bcrypt
+import config
+import models
+from database import get_db
 from fastapi import Depends, HTTPException, Query, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
+from utils import utcnow
 
-from database import get_db
-import models
-
-SECRET_KEY = os.environ.get("SECRET_KEY", "HELPDESK_SECRET_KEY_CHANGE_IN_PRODUCTION")
-ALGORITHM  = "HS256"
-ACCESS_TOKEN_EXPIRE_HOURS = 8
+SECRET_KEY = config.SECRET_KEY
+ALGORITHM  = config.ALGORITHM
+ACCESS_TOKEN_EXPIRE_HOURS = config.ACCESS_TOKEN_EXPIRE_HOURS
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -28,7 +28,7 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     to_encode = data.copy()
-    expire = datetime.utcnow() + (expires_delta or timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS))
+    expire = utcnow() + (expires_delta or timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS))
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 

@@ -8,16 +8,15 @@ One-time setup:
 4. "Apply Update" in the admin dashboard runs git pull and restarts.
 """
 import os
-import sys
 import subprocess
+import sys
 import threading
 from datetime import datetime
 
-import requests as http_requests
-from fastapi import APIRouter, Depends, HTTPException
-
 import models
+import requests as http_requests
 from auth import require_super_admin
+from fastapi import APIRouter, Depends, HTTPException
 
 router = APIRouter()
 
