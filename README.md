@@ -24,15 +24,19 @@ Built with **FastAPI** + **SQLite**. Ships with a browser-based admin dashboard,
 
 | Feature | Details |
 |---|---|
-| **Ticket Management** | Create, assign, update, and resolve support tickets |
+| **Ticket Management** | Create, assign, prioritise, update, and resolve support tickets |
+| **Prioritisation** | Low / Normal / High / Urgent with filtering and priority-aware alerts |
+| **Duplicate-proof Numbering** | Atomic per-day counter — safe under simultaneous submissions |
 | **Role-Based Access** | `super_admin` and `technician` roles with separate portals |
-| **Real-Time Notifications** | WebSocket bell for staff; 30s polling for desktop client |
-| **Admin Dashboard** | Ticket list, filters, user management, notes — served at `/admin` |
-| **Technician Portal** | Focused assigned-ticket view — served at `/tech` |
-| **Desktop Client** | Windows/macOS system tray app (PySide6) for end-users |
-| **File Attachments** | PDF and image uploads stored directly in the database |
+| **Live Chat** | Secure end-user ↔ staff chat with agent presence and response templates |
+| **Knowledge Base** | Mines resolved tickets, generates review-only draft articles/playbooks |
+| **Real-Time Notifications** | WebSocket bell for staff; polling for desktop client |
+| **Admin Dashboard** | Tickets, filters, users, notes, chat, knowledge base — served at `/admin` |
+| **Technician Portal** | Assigned tickets + live chat — served at `/tech` |
+| **Desktop Client** | Windows/macOS system tray app (PySide6) — self-healing autostart |
+| **File Attachments** | PDF and image uploads, validated by magic bytes, stored in the database |
 | **Internal Notes** | Per-ticket staff notes visible only to admin/tech |
-| **Auto Cleanup** | Tickets older than 30 days removed automatically at 2:00 AM |
+| **Retention** | Optional auto-cleanup (off by default; keep full history for auditing) |
 | **Background Server** | Silent background process via `setup.sh` / `setup.bat` |
 
 ---
@@ -256,14 +260,33 @@ Distribute the built binary to end-user workstations. The app registers itself f
 ## Security
 
 - Change default credentials immediately after deployment
-- Set a strong, unique `SECRET_KEY` — never use the default
-- Restrict `CORS_ORIGINS` to your server origin in production
-- JWT tokens expire after 8 hours
+- `SECRET_KEY` auto-generates and persists if unset — set it explicitly for multi-node
+- Restrict `CORS_ORIGINS` to your server origin in production (wildcard never sends credentials)
+- Security headers (CSP, X-Frame-Options, nosniff, Referrer-Policy) on every response
+- Rate limiting on public endpoints and login (brute-force / spam protection)
+- JWT tokens expire after 8 hours (configurable)
 - Passwords hashed with bcrypt (min 8 characters enforced)
-- File attachments stored as database blobs — no filesystem exposure
-- `POST /tickets/` is intentionally unauthenticated (required for client app submissions)
+- File attachments validated by magic bytes and stored as database blobs — no filesystem exposure
+- `POST /tickets/` is intentionally unauthenticated (required for client app submissions) but rate limited
+- AI-generated knowledge-base content is never auto-published — it requires admin approval
 
 See [docs/SECURITY_ANALYSIS.md](docs/SECURITY_ANALYSIS.md) for a full security review.
+
+---
+
+## Live Chat & Knowledge Base
+
+**Live chat** — Staff set their availability (Available / Busy / Away / Offline) from the
+top bar. When an agent is Available, end users see a **Live Chat with IT** button in the
+desktop client. Agents work a queue: claim a conversation, reply, and insert reusable
+**response templates** (inserted into the editor for review — never auto-sent).
+
+**Knowledge base** — The system analyses resolved-ticket history to surface frequent
+problems, common resolutions, repeated troubleshooting steps, and the devices/departments/
+locations most often involved, then flags clusters that would benefit from an article.
+One click generates an **AI-assisted draft**; drafts and playbooks must be reviewed and
+**approved by an admin** before they are published. Editing an approved article returns it
+to draft for re-review.
 
 ---
 
