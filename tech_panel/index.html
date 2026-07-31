@@ -302,7 +302,7 @@ textarea.note-inp:focus{border-color:var(--blue)}
 <!-- ════════════════ LOGIN ════════════════ -->
 <div id="loginScreen">
   <div class="login-card">
-    <div class="login-icon">🎫</div>
+    <div class="login-icon brand-icon">🎫</div>
     <h1>IT Ticketing System</h1>
     <div class="login-sub">Technician portal for the helpdesk.</div>
     <div class="fgrp">
@@ -331,14 +331,14 @@ textarea.note-inp:focus{border-color:var(--blue)}
   <div id="topbar">
     <div class="sb-brand">
       <div class="sb-brand-inner">
-        <div class="sb-brand-icon">🎫</div>
+        <div class="sb-brand-icon brand-icon">🎫</div>
         <div class="sb-title">IT Ticketing System</div>
       </div>
     </div>
     <nav class="sb-nav">
       <div class="sb-section-lbl">Menu</div>
       <button class="sb-item nav-btn active" id="navTkts" onclick="showPage('tickets')">
-        <span class="nav-icon">🎫</span> Tickets
+        <span class="nav-icon">📋</span> Tickets
       </button>
       <button class="sb-item nav-btn" id="navChat" onclick="showPage('chat')">
         <span class="nav-icon">💬</span> Live Chat
@@ -476,6 +476,7 @@ textarea.note-inp:focus{border-color:var(--blue)}
               </div>
               <div style="display:flex;gap:6px">
                 <button class="btn btn-ghost btn-sm" id="chatClaimBtn" onclick="claimChat()">Claim</button>
+                <button class="btn btn-ghost btn-sm hidden" id="chatEscalateBtn" onclick="escalateChat()">↑ Escalate to Admin</button>
                 <button class="btn btn-danger btn-sm" onclick="closeChatStaff()">End Chat</button>
               </div>
             </div>
@@ -696,7 +697,19 @@ function showPage(p){
   if(p==="chat"){show("pgChat");$("navChat").classList.add("active");loadChatSessions();}
 }
 
-window.addEventListener("load",()=>{if(S.token)initDashboard();});
+window.addEventListener("load",()=>{applyBranding();if(S.token)initDashboard();});
+
+function applyBranding(){
+  const url = API.replace(/\/$/,"") + "/branding/logo?t=" + Date.now();
+  const test = new Image();
+  test.onload = ()=>{
+    document.querySelectorAll(".brand-icon").forEach(el=>{
+      el.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:contain;border-radius:inherit"/>`;
+    });
+  };
+  test.onerror = ()=>{};
+  test.src = url;
+}
 $("lp").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});
 $("lu").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});
 
@@ -923,7 +936,20 @@ function connectWS(){
   try{
     ws=new WebSocket(`${wsBase}/ws/notifications?token=${encodeURIComponent(S.token)}`);
     ws.onopen=()=>{$("wsDot").classList.add("on");clearTimeout(wsTimer);ws._ping=setInterval(()=>{if(ws&&ws.readyState===1)ws.send("ping");},25000);};
-    ws.onmessage=e=>{try{const d=JSON.parse(e.data);if(d.type==="pong")return;loadNotifications();showToast(d.message||"New notification");}catch{}};
+    ws.onmessage=e=>{try{
+      const d=JSON.parse(e.data);
+      if(d.type==="pong")return;
+      if(d.type==="chat_message"||d.type==="chat_escalated"){
+        if(!$("pgChat").classList.contains("hidden")){
+          loadChatSessions();
+          if(d.session_id && curChat===d.session_id) refreshChatThread();
+        }
+        pollChatWaiting();
+        showToast(d.message||"New chat activity");
+        return;
+      }
+      loadNotifications();showToast(d.message||"New notification");
+    }catch{}};
     ws.onclose=()=>{$("wsDot").classList.remove("on");clearInterval(ws._ping);wsTimer=setTimeout(connectWS,5000);};
     ws.onerror=()=>ws.close();
   }catch{}
@@ -1004,7 +1030,9 @@ async function loadChatSessions(){
     el.innerHTML=sessions.map(s=>`
       <div class="chat-sess-item ${curChat===s.id?'active':''}" onclick="openChatSession('${esc(s.id)}')">
         <div class="chat-sess-name">${esc(s.display_name||"User")}
-          <span class="chat-sess-badge csb-${s.status}">${esc(s.status)}</span></div>
+          <span class="chat-sess-badge csb-${s.status}">${esc(s.status)}</span>
+          ${s.unread_count?`<span class="chat-sess-badge" style="background:#EF4444;color:#fff">${s.unread_count} new</span>`:''}
+        </div>
         <div class="chat-sess-meta">${esc(s.subject||s.hostname||"")}${s.agent_username?" · "+esc(s.agent_username):""}</div>
       </div>`).join("");
   }catch(e){ el.innerHTML=`<div class="notif-empty">Error: ${esc(e.message)}</div>`; }
@@ -1031,6 +1059,7 @@ async function refreshChatThread(){
       $("chatPeer").textContent=s.display_name||"User";
       $("chatPeerMeta").textContent=(s.hostname||"")+(s.agent_username?" · agent: "+s.agent_username:"");
       $("chatClaimBtn").style.display=s.agent_username?"none":"";
+      $("chatEscalateBtn").classList.toggle("hidden", s.escalated || s.status==="closed");
     }
     const thread=$("chatThread");
     thread.innerHTML=msgs.map(m=>{
@@ -1058,6 +1087,11 @@ async function sendChatReply(){
 async function closeChatStaff(){
   if(!curChat||!confirm("End this chat?")) return;
   try{ await apiFetch("/chat/sessions/"+curChat+"/close-staff",{method:"POST",headers:authH()}); refreshChatThread(); loadChatSessions(); }
+  catch(e){ alert("Error: "+e.message); }
+}
+async function escalateChat(){
+  if(!curChat||!confirm("Escalate this chat to admins?")) return;
+  try{ await apiFetch("/chat/sessions/"+curChat+"/escalate",{method:"POST",headers:authH()}); refreshChatThread(); loadChatSessions(); }
   catch(e){ alert("Error: "+e.message); }
 }
 async function loadCannedTools(){

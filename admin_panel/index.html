@@ -358,7 +358,7 @@ textarea.note-inp:focus{border-color:var(--blue)}
 <!-- ════════════════ LOGIN ════════════════ -->
 <div id="loginScreen">
   <div class="login-card">
-    <div class="login-icon">🎫</div>
+    <div class="login-icon brand-icon">🎫</div>
     <h1>IT Ticketing System</h1>
     <div class="login-sub">Admin &amp; technician console for the helpdesk.</div>
     <div class="fgrp">
@@ -391,14 +391,14 @@ textarea.note-inp:focus{border-color:var(--blue)}
   <div id="topbar">
     <div class="sb-brand">
       <div class="sb-brand-inner">
-        <div class="sb-brand-icon">🎫</div>
+        <div class="sb-brand-icon brand-icon">🎫</div>
         <div id="tbAppTitle">IT Ticketing</div>
       </div>
     </div>
     <nav class="sb-nav">
       <div class="sb-section-lbl">Menu</div>
       <button class="nav-btn active" id="navTkts" onclick="showPage('tickets')">
-        <span class="nav-icon">🎫</span> Tickets
+        <span class="nav-icon">📋</span> Tickets
       </button>
       <button class="nav-btn" id="navChat" onclick="showPage('chat')">
         <span class="nav-icon">💬</span> Live Chat
@@ -611,6 +611,48 @@ textarea.note-inp:focus{border-color:var(--blue)}
             </div>
           </div>
         </div>
+
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:22px;margin-top:16px">
+          <div class="pg-title" style="font-size:16px">Push a Desktop Client Update</div>
+          <div class="pg-sub" style="margin-bottom:14px">
+            The dashboards above are always current — they're served fresh from the server. The
+            desktop client end-users install is a separate build, so it needs its own update flow:
+            (1) build/upload the new client executable somewhere reachable (e.g. a GitHub release),
+            (2) fill in the version + direct download link below, (3) click "Push Version" — every
+            client checks on startup and shows an update prompt with your link.
+          </div>
+          <div class="ablock-title">Currently Pushed Version</div>
+          <div id="clientVerCurrent" class="muted sm" style="margin-bottom:14px">Loading…</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="fgrp" style="margin-top:0"><label class="flbl">New version (e.g. 1.1.0)</label>
+              <input class="finp" id="cvVersion" placeholder="1.1.0"/></div>
+            <div class="fgrp" style="margin-top:0"><label class="flbl">Download URL</label>
+              <input class="finp" id="cvUrl" placeholder="https://example.com/downloads/app-1.1.0.exe"/></div>
+          </div>
+          <div class="fgrp"><label class="flbl">Release notes (shown to users)</label>
+            <textarea class="note-inp" id="cvNotes" placeholder="What's new in this version…"></textarea></div>
+          <label style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;margin-top:10px;cursor:pointer">
+            <input type="checkbox" id="cvMandatory"/> Mandatory update (client can't dismiss the prompt)
+          </label>
+          <button class="btn btn-blue btn-sm mt2" onclick="pushClientVersion()">Push Version</button>
+          <div id="cvMsg" class="hidden mt2"></div>
+        </div>
+
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:22px;margin-top:16px">
+          <div class="pg-title" style="font-size:16px">Branding</div>
+          <div class="pg-sub" style="margin-bottom:14px">Upload a PNG or JPEG logo to replace the default icon across both dashboards and the desktop client.</div>
+          <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px">
+            <div id="logoPreviewBox" style="width:52px;height:52px;border-radius:10px;border:1px solid var(--border);
+              display:flex;align-items:center;justify-content:center;overflow:hidden;background:var(--page);font-size:22px">🎫</div>
+            <div class="muted sm" id="logoStatusTxt">Checking…</div>
+          </div>
+          <input type="file" id="logoFileInp" accept="image/png,image/jpeg"/>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <button class="btn btn-blue btn-sm" onclick="uploadLogo()">Upload Logo</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteLogo()">Remove Logo</button>
+          </div>
+          <div id="logoMsg" class="hidden mt2"></div>
+        </div>
       </div>
     </div>
 
@@ -631,7 +673,9 @@ textarea.note-inp:focus{border-color:var(--blue)}
               </div>
               <div style="display:flex;gap:6px">
                 <button class="btn btn-ghost btn-sm" id="chatClaimBtn" onclick="claimChat()">Claim</button>
+                <button class="btn btn-ghost btn-sm hidden" id="chatEscalateBtn" onclick="escalateChat()">↑ Escalate to Admin</button>
                 <button class="btn btn-danger btn-sm" onclick="closeChatStaff()">End Chat</button>
+                <button class="btn btn-danger btn-sm hidden" id="chatDeleteBtn" onclick="deleteChatSessionUI()">Delete</button>
               </div>
             </div>
             <div class="chat-thread" id="chatThread"></div>
@@ -1006,7 +1050,22 @@ function initDashboard(){
   chatWaitTimer=setInterval(pollChatWaiting, 15000);
 }
 
-window.addEventListener("load",()=>{ if(S.token) initDashboard(); });
+window.addEventListener("load",()=>{ applyBranding(); if(S.token) initDashboard(); });
+
+// ═══════════════════════════════════════════
+//  Branding (custom logo)
+// ═══════════════════════════════════════════
+function applyBranding(){
+  const url = API.replace(/\/$/,"") + "/branding/logo?t=" + Date.now();
+  const test = new Image();
+  test.onload = ()=>{
+    document.querySelectorAll(".brand-icon").forEach(el=>{
+      el.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:contain;border-radius:inherit"/>`;
+    });
+  };
+  test.onerror = ()=>{ /* no custom logo configured — keep the default emoji already in the markup */ };
+  test.src = url;
+}
 $("lp").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});
 $("lu").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});
 
@@ -1064,6 +1123,15 @@ function connectWebSocket(){
       try{
         const data = JSON.parse(e.data);
         if(data.type==="pong") return;
+        if(data.type==="chat_message" || data.type==="chat_escalated"){
+          if(!$("pgChat").classList.contains("hidden")){
+            loadChatSessions();
+            if(data.session_id && curChat===data.session_id) refreshChatThread(false);
+          }
+          pollChatWaiting();
+          showToast(data.message || "New chat activity");
+          return;
+        }
         // New notification arrived — refresh list and bump count
         loadNotifications();
         // Flash toast
@@ -1195,7 +1263,7 @@ function showPage(p){
   ["navTkts","navUsrs","navUpd","navChat","navKB"].forEach(id=>$(id).classList.remove("active"));
   if(p==="tickets"){show("pgTickets");$("navTkts").classList.add("active");loadAll();}
   if(p==="users")  {show("pgUsers"); $("navUsrs").classList.add("active");loadUsers();}
-  if(p==="update") {show("pgUpdate");$("navUpd").classList.add("active");checkUpdates();}
+  if(p==="update") {show("pgUpdate");$("navUpd").classList.add("active");checkUpdates();loadClientVersionAdmin();loadBrandingStatus();}
   if(p==="chat")   {show("pgChat"); $("navChat").classList.add("active");loadChatSessions();}
   if(p==="kb")     {show("pgKB");   $("navKB").classList.add("active");loadKB();}
 }
@@ -1594,6 +1662,72 @@ async function applyUpdate(){
 }
 
 // ═══════════════════════════════════════════
+//  Desktop client version push
+// ═══════════════════════════════════════════
+async function loadClientVersionAdmin(){
+  try{
+    const d = await apiFetch("/client/version",{headers:authH()});
+    $("clientVerCurrent").innerHTML = `<strong>v${esc(d.latest_version)}</strong>`+
+      (d.download_url?` — <a href="${esc(d.download_url)}" target="_blank" rel="noopener">download link</a>`:` — no download link set yet`)+
+      (d.mandatory?` <span class="chat-sess-badge csb-active">Mandatory</span>`:``);
+  }catch{ $("clientVerCurrent").textContent="Unable to load."; }
+}
+
+async function pushClientVersion(){
+  const latest_version=$("cvVersion").value.trim();
+  const download_url=$("cvUrl").value.trim();
+  const release_notes=$("cvNotes").value.trim();
+  const mandatory=$("cvMandatory").checked;
+  if(!latest_version||!download_url){ flash("cvMsg","Version and download URL are required.",false); return; }
+  try{
+    await apiFetch("/settings/client-version",{method:"PATCH",headers:authH(),
+      body:JSON.stringify({latest_version,download_url,release_notes,mandatory})});
+    flash("cvMsg","✓ Version pushed. Clients will see it next launch.",true);
+    loadClientVersionAdmin();
+  }catch(e){ flash("cvMsg","Error: "+e.message,false); }
+}
+
+// ═══════════════════════════════════════════
+//  Branding (logo upload — super_admin)
+// ═══════════════════════════════════════════
+async function loadBrandingStatus(){
+  try{
+    const d = await apiFetch("/branding");
+    $("logoStatusTxt").textContent = d.logo_configured ? "Custom logo is active." : "No custom logo set — using the default icon.";
+    if(d.logo_configured){
+      $("logoPreviewBox").innerHTML = `<img src="${API.replace(/\/$/,"")}/branding/logo?t=${Date.now()}" style="width:100%;height:100%;object-fit:contain"/>`;
+    }
+  }catch{ $("logoStatusTxt").textContent="Unable to load branding status."; }
+}
+
+async function uploadLogo(){
+  const inp = $("logoFileInp");
+  if(!inp.files || !inp.files[0]){ flash("logoMsg","Choose a PNG or JPEG file first.",false); return; }
+  const fd = new FormData();
+  fd.append("file", inp.files[0]);
+  try{
+    const r = await fetch(API.replace(/\/$/,"")+"/settings/logo",{
+      method:"POST", headers:{"Authorization":"Bearer "+S.token}, body: fd,
+    });
+    if(!r.ok){ const b=await r.json().catch(()=>({})); throw new Error(b.detail||"Upload failed"); }
+    flash("logoMsg","✓ Logo uploaded.",true);
+    inp.value="";
+    loadBrandingStatus(); applyBranding();
+  }catch(e){ flash("logoMsg","Error: "+e.message,false); }
+}
+
+async function deleteLogo(){
+  if(!confirm("Remove the custom logo and revert to the default icon?")) return;
+  try{
+    await apiFetch("/settings/logo",{method:"DELETE",headers:authH()});
+    $("logoPreviewBox").innerHTML="🎫";
+    flash("logoMsg","✓ Reverted to default icon.",true);
+    loadBrandingStatus();
+    document.querySelectorAll(".brand-icon").forEach(el=>{ el.innerHTML="🎫"; });
+  }catch(e){ flash("logoMsg","Error: "+e.message,false); }
+}
+
+// ═══════════════════════════════════════════
 //  Auto-refresh every 20s
 // ═══════════════════════════════════════════
 function startTimer(){ stopTimer(); timer=setInterval(()=>{ if(!$("pgTickets").classList.contains("hidden")) loadAll(); },20000); }
@@ -1655,7 +1789,10 @@ async function loadChatSessions(){
     el.innerHTML=sessions.map(s=>`
       <div class="chat-sess-item ${curChat===s.id?'active':''}" onclick="openChatSession('${esc(s.id)}')">
         <div class="chat-sess-name">${esc(s.display_name||"User")}
-          <span class="chat-sess-badge csb-${s.status}">${esc(s.status)}</span></div>
+          <span class="chat-sess-badge csb-${s.status}">${esc(s.status)}</span>
+          ${s.escalated?'<span class="chat-sess-badge csb-active">Escalated</span>':''}
+          ${s.unread_count?`<span class="chat-sess-badge" style="background:#EF4444;color:#fff">${s.unread_count} new</span>`:''}
+        </div>
         <div class="chat-sess-meta">${esc(s.subject||s.hostname||"")}${s.agent_username?" · "+esc(s.agent_username):""}</div>
       </div>`).join("");
   }catch(e){ el.innerHTML=`<div class="notif-empty">Error: ${esc(e.message)}</div>`; }
@@ -1681,8 +1818,10 @@ async function refreshChatThread(full){
     const s=sessions.find(x=>x.id===curChat);
     if(s){
       $("chatPeer").textContent=s.display_name||"User";
-      $("chatPeerMeta").textContent=(s.hostname||"")+(s.agent_username?" · agent: "+s.agent_username:"");
+      $("chatPeerMeta").textContent=(s.hostname||"")+(s.agent_username?" · agent: "+s.agent_username:"")+(s.escalated?" · escalated":"");
       $("chatClaimBtn").style.display=s.agent_username?"none":"";
+      $("chatEscalateBtn").classList.toggle("hidden", S.role==="super_admin" || s.escalated || s.status==="closed");
+      $("chatDeleteBtn").classList.toggle("hidden", S.role!=="super_admin");
     }
     const thread=$("chatThread");
     thread.innerHTML=msgs.map(m=>{
@@ -1717,6 +1856,24 @@ async function closeChatStaff(){
   try{
     await apiFetch("/chat/sessions/"+curChat+"/close-staff",{method:"POST",headers:authH()});
     refreshChatThread(false); loadChatSessions();
+  }catch(e){ alert("Error: "+e.message); }
+}
+
+async function escalateChat(){
+  if(!curChat||!confirm("Escalate this chat to admins?")) return;
+  try{
+    await apiFetch("/chat/sessions/"+curChat+"/escalate",{method:"POST",headers:authH()});
+    refreshChatThread(false); loadChatSessions();
+  }catch(e){ alert("Error: "+e.message); }
+}
+
+async function deleteChatSessionUI(){
+  if(!curChat||!confirm("Permanently delete this chat session and all its messages?")) return;
+  try{
+    await apiFetch("/chat/sessions/"+curChat,{method:"DELETE",headers:authH()});
+    curChat=null;
+    $("chatActive").classList.add("hidden"); $("chatEmpty").classList.remove("hidden");
+    loadChatSessions();
   }catch(e){ alert("Error: "+e.message); }
 }
 
