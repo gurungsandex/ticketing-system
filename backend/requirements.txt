@@ -6,6 +6,6 @@ python-jose[cryptography]>=3.3.0
 bcrypt>=4.0.0
 python-multipart>=0.0.9
 apscheduler>=3.11.2
-requests>=2.31.0
+requests>=2.34.2
 websockets>=16.0
 python-dotenv>=1.2.2
