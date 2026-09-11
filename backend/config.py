@@ -90,6 +90,9 @@ RATE_LIMIT_TICKET_CREATE = int(os.environ.get("RATE_LIMIT_TICKET_CREATE", "20"))
 RATE_LIMIT_ATTACHMENT = int(os.environ.get("RATE_LIMIT_ATTACHMENT", "30"))          # per window / IP
 RATE_LIMIT_LOGIN = int(os.environ.get("RATE_LIMIT_LOGIN", "10"))                     # per window / IP
 RATE_LIMIT_WINDOW_SECONDS = int(os.environ.get("RATE_LIMIT_WINDOW_SECONDS", "60"))
+# The tray client polls every 30s, so this is generous for real use while
+# still capping enumeration attempts against the client_id namespace.
+RATE_LIMIT_CLIENT_POLL = int(os.environ.get("RATE_LIMIT_CLIENT_POLL", "60"))
 
 # ── Uploads ───────────────────────────────────────────
 MAX_UPLOAD_BYTES = int(os.environ.get("MAX_UPLOAD_BYTES", str(10 * 1024 * 1024)))  # 10 MB

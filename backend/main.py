@@ -87,6 +87,15 @@ async def lifespan(application: FastAPI):
         scheduler.add_job(_cleanup_old_records, "cron", hour=2, minute=0)
     scheduler.start()
 
+    if config.CORS_ALLOW_ALL:
+        print("=" * 60)
+        print("[NOTICE] CORS_ORIGINS is '*' — any website a signed-in staff")
+        print("  member visits can call this API from their browser. Responses")
+        print("  are readable because credentials are not sent cross-origin,")
+        print("  but state-changing requests still reach the server. Set")
+        print("  CORS_ORIGINS to your dashboard's exact origin in .env.")
+        print("=" * 60)
+
     if config.SECRET_KEY_AUTO_GENERATED:
         print("=" * 60)
         print("[NOTICE] SECRET_KEY not set — using an auto-generated key")

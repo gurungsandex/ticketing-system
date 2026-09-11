@@ -1,10 +1,20 @@
 from typing import List
 
+import config
 import models
 import schemas
 from auth import decode_token, get_current_admin
 from database import get_db
-from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Query,
+    Request,
+    WebSocket,
+    WebSocketDisconnect,
+)
+from security import rate_limit
 from sqlalchemy.orm import Session
 from websocket_manager import ws_manager
 
@@ -122,8 +132,18 @@ def mark_one_read(
 # Must be last — {client_id} would otherwise swallow /my and /my/unread-count
 
 @router.get("/notifications/{client_id}", response_model=List[schemas.NotificationItem])
-def get_client_notifications(client_id: str, db: Session = Depends(get_db)):
-    """Polled by the end-user Windows tray app to check ticket status changes."""
+def get_client_notifications(
+    client_id: str, request: Request, db: Session = Depends(get_db)
+):
+    """Polled by the end-user tray app to check ticket status changes.
+
+    Unauthenticated by design: the desktop client has no account. The client_id
+    is a locally generated random uuid that acts as a bearer secret, the same
+    model the chat endpoints use, so a caller can only read the tickets they
+    created. Rate limited so the endpoint cannot be used to enumerate ids or to
+    hammer the server.
+    """
+    rate_limit(request, "client_notifications", config.RATE_LIMIT_CLIENT_POLL)
     tickets = (
         db.query(models.Ticket)
         .filter(models.Ticket.client_id == client_id)
