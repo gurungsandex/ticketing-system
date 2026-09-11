@@ -19,6 +19,7 @@ from dotenv import load_dotenv
 
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "..", ".env"))
 
+import audit  # noqa: E402
 import config  # noqa: E402
 import models  # noqa: E402
 import schemas  # noqa: E402
@@ -177,7 +178,14 @@ def login(body: schemas.LoginRequest, request: Request, db: Session = Depends(ge
         models.AdminUser.username == body.username
     ).first()
     if not user or not verify_password(body.password, user.hashed_password):
+        # Record the attempted username only -- never the submitted password.
+        audit.record(db, audit.LOGIN_FAILURE, actor=body.username,
+                     request=request, success=False)
+        db.commit()
         raise HTTPException(status_code=401, detail="Invalid username or password")
+    audit.record(db, audit.LOGIN_SUCCESS, actor=user.username,
+                 detail=f"role={user.role}", request=request)
+    db.commit()
     token = create_access_token({"sub": user.username, "role": user.role})
     return schemas.LoginResponse(
         access_token=token,
@@ -190,14 +198,20 @@ def login(body: schemas.LoginRequest, request: Request, db: Session = Depends(ge
 @app.patch("/auth/change-password")
 def change_password(
     body: schemas.ChangePasswordRequest,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: models.AdminUser = Depends(get_current_admin),
 ):
     if not verify_password(body.current_password, current_user.hashed_password):
+        audit.record(db, audit.PASSWORD_CHANGE, actor=current_user.username,
+                     detail="rejected: wrong current password",
+                     request=request, success=False)
+        db.commit()
         raise HTTPException(status_code=400, detail="Current password is incorrect")
     if len(body.new_password) < 8:
         raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
     current_user.hashed_password = hash_password(body.new_password)
+    audit.record(db, audit.PASSWORD_CHANGE, actor=current_user.username, request=request)
     db.commit()
     return {"message": "Password changed successfully"}
 
@@ -205,7 +219,11 @@ def change_password(
 # ── Scheduled cleanup ─────────────────────────────────
 def _cleanup_old_records():
     """Delete tickets, notes, attachments, and notifications older than the
-    configured retention window. Disabled entirely when retention is 0."""
+    configured retention window. Disabled entirely when retention is 0.
+
+    Audit rows are deliberately excluded: an audit trail is meant to outlive
+    the records it describes, so "who deleted this ticket" survives the
+    ticket's own removal."""
     if config.TICKET_RETENTION_DAYS <= 0:
         return
     cutoff = utcnow() - timedelta(days=config.TICKET_RETENTION_DAYS)

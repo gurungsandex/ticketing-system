@@ -1488,16 +1488,34 @@ async function loadAttachments(id){
   }catch(e){el.innerHTML=`<div class="muted sm">Error loading attachments.</div>`;}
 }
 
-function downloadAttachment(id, filename){
-  const url = API.replace(/\/$/,"")
-    + "/attachments/" + id + "/download"
-    + "?token=" + encodeURIComponent(S.token);
-  const a = document.createElement("a");
-  a.href     = url;
-  a.download = filename || "attachment";
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+async function downloadAttachment(id, filename){
+  // The staff JWT is sent as a header, never in the URL: a query-string token
+  // is recorded by every access log on the path, kept in browser history and
+  // can leak via Referer. We pull the bytes with fetch() and hand the browser
+  // a short-lived blob URL instead.
+  const url = API.replace(/\/$/,"") + "/attachments/" + id + "/download";
+  let objectUrl = null;
+  try{
+    const r = await fetch(url, {headers:{"Authorization":"Bearer "+S.token}});
+    if(!r.ok){
+      let m = "Download failed ("+r.status+")";
+      try{ const b = await r.json(); m = b.detail || m; }catch{}
+      throw new Error(m);
+    }
+    const blob = await r.blob();
+    objectUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href     = objectUrl;
+    a.download = filename || "attachment";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }catch(e){
+    alert("Could not download attachment: " + e.message);
+  }finally{
+    // Revoke on a tick -- Safari needs the URL to outlive the click handler.
+    if(objectUrl) setTimeout(()=>URL.revokeObjectURL(objectUrl), 10000);
+  }
 }
 
 function colorSel(){

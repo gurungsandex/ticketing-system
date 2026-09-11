@@ -14,6 +14,7 @@ Design notes
 import uuid
 from typing import List, Optional
 
+import audit
 import config
 import models
 import schemas
@@ -455,6 +456,7 @@ async def escalate_chat_session(
 @router.delete("/chat/sessions/{session_id}")
 def delete_chat_session(
     session_id: str,
+    request: Request,
     db: Session = Depends(get_db),
     _admin: models.AdminUser = Depends(require_super_admin),
 ):
@@ -464,6 +466,10 @@ def delete_chat_session(
     db.query(models.ChatMessage).filter(models.ChatMessage.session_id == session_id).delete()
     db.query(models.Notification).filter(models.Notification.ticket_id == session_id).delete()
     db.delete(session)
+    # Identifiers only -- the deleted messages are user free text and must not
+    # be copied into the audit trail.
+    audit.record(db, audit.CHAT_DELETE, actor=_admin.username,
+                 target=session_id, request=request)
     db.commit()
     return {"deleted": session_id}
 

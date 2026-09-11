@@ -82,6 +82,19 @@ CORS_ORIGINS_RAW = os.environ.get("CORS_ORIGINS", "*")
 CORS_ORIGINS = [o.strip() for o in CORS_ORIGINS_RAW.split(",") if o.strip()]
 CORS_ALLOW_ALL = CORS_ORIGINS == ["*"] or not CORS_ORIGINS
 
+# Reverse-proxy trust. X-Forwarded-For is attacker-controlled unless the
+# request demonstrably came from a proxy we trust, so it is IGNORED by default:
+# an unset value means rate limiting keys on the real socket peer, which is
+# correct for a directly-exposed LAN server and cannot be spoofed.
+#
+# Set this to the proxy's IP(s) ONLY when the app sits behind a reverse proxy
+# (nginx/Caddy/IIS/load balancer). Leaving it unset behind a proxy would make
+# every client share the proxy's IP and trip the shared limit; setting it when
+# there is no proxy would let anyone forge their apparent IP. Comma-separated.
+TRUSTED_PROXY_IPS = {
+    ip.strip() for ip in os.environ.get("TRUSTED_PROXY_IPS", "").split(",") if ip.strip()
+}
+
 # ── Rate limiting (in-memory, per-process) ────────────
 # Sensible defaults that stop spam/DoS on the intentionally-unauthenticated
 # public endpoints without hindering normal use. Tunable via env.
@@ -90,6 +103,14 @@ RATE_LIMIT_TICKET_CREATE = int(os.environ.get("RATE_LIMIT_TICKET_CREATE", "20"))
 RATE_LIMIT_ATTACHMENT = int(os.environ.get("RATE_LIMIT_ATTACHMENT", "30"))          # per window / IP
 RATE_LIMIT_LOGIN = int(os.environ.get("RATE_LIMIT_LOGIN", "10"))                     # per window / IP
 RATE_LIMIT_WINDOW_SECONDS = int(os.environ.get("RATE_LIMIT_WINDOW_SECONDS", "60"))
+
+# ── Self-update ───────────────────────────────────────
+# The admin dashboard can pull new code and restart the process in place.
+# Whatever the git remote serves then executes as the server user, so this is
+# a remote-code-execution path gated on one admin account staying uncompromised
+# -- and it silently bypasses whatever review/staging your normal deploy has.
+# Disabled by default; opt in only where a managed deploy isn't available.
+ALLOW_SELF_UPDATE = _bool_env("ALLOW_SELF_UPDATE", False)
 
 # ── Uploads ───────────────────────────────────────────
 MAX_UPLOAD_BYTES = int(os.environ.get("MAX_UPLOAD_BYTES", str(10 * 1024 * 1024)))  # 10 MB

@@ -10,12 +10,13 @@ Approval rules (enforced here, not just in the UI):
 import json
 from typing import List, Optional
 
+import audit
 import config
 import models
 import schemas
 from auth import get_current_admin, require_super_admin
 from database import get_db
-from fastapi import APIRouter, Body, Depends, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request
 from services import kb_analysis
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -181,6 +182,7 @@ def delete_article(
 @router.post("/kb/articles/{article_id}/review", response_model=schemas.KBArticleResponse)
 def review_article(
     article_id: int,
+    request: Request,
     decision: str = Body(..., embed=True),   # approved | published | rejected | draft
     db: Session = Depends(get_db),
     current_user: models.AdminUser = Depends(require_super_admin),
@@ -198,6 +200,12 @@ def review_article(
         a.approved_by = None
         a.approved_at = None
     a.updated_at = utcnow()
+    audit.record(
+        db,
+        audit.KB_APPROVE if decision in ("approved", "published") else audit.KB_REJECT,
+        actor=current_user.username, target=str(article_id),
+        detail=f"status={decision}", request=request,
+    )
     db.commit()
     db.refresh(a)
     return a
