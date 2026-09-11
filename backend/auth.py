@@ -5,7 +5,7 @@ import bcrypt
 import config
 import models
 from database import get_db
-from fastapi import Depends, HTTPException, Query, status
+from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
@@ -45,16 +45,21 @@ def decode_token(token: str) -> dict:
         )
 
 
-def _resolve_token(
-    credentials: Optional[HTTPAuthorizationCredentials],
-    token_param: Optional[str],
-) -> str:
-    """Return the raw JWT from either the Authorization header or ?token= query param
-    (query param is used by WebSocket handshakes and download links)."""
+def _resolve_token(credentials: Optional[HTTPAuthorizationCredentials]) -> str:
+    """Return the raw JWT from the Authorization header.
+
+    Deliberately header-only. A token in the query string is written to the
+    access log of every hop it crosses (server, reverse proxy, corporate
+    egress), lands in browser history, and leaks via Referer -- and this one is
+    a full-privilege staff token valid for hours. Attachment downloads now send
+    the header instead and stream the response via a blob URL.
+
+    WebSocket handshakes cannot set headers from the browser API, so those
+    endpoints call decode_token() with a query token directly; that path stays
+    intentionally separate rather than being blessed here for all HTTP routes.
+    """
     if credentials and credentials.credentials:
         return credentials.credentials
-    if token_param:
-        return token_param
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Authentication required",
@@ -64,11 +69,10 @@ def _resolve_token(
 
 def get_current_admin(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
-    token: Optional[str] = Query(None),   # for WS / download URLs
     db: Session = Depends(get_db),
 ) -> models.AdminUser:
     """Accepts any authenticated IT staff member (admin or technician)."""
-    raw = _resolve_token(credentials, token)
+    raw = _resolve_token(credentials)
     payload = decode_token(raw)
     username: str = payload.get("sub")
     if not username:
