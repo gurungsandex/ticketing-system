@@ -617,7 +617,9 @@ function clearSession(){sessionStorage.removeItem(SESSION_KEY);}
 const $=id=>document.getElementById(id);
 const show=id=>$(id).classList.remove("hidden");
 const hide=id=>$(id).classList.add("hidden");
-function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+// Single quotes matter too: several call sites interpolate into single-quoted
+// attributes such as onclick="fn('...')".
+function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");}
 function fmt(dt){
   if(!dt) return "—";
   try{const d=new Date(dt.endsWith("Z")?dt:dt+"Z");

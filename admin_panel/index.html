@@ -920,8 +920,24 @@ const show=id=>$(id).classList.remove("hidden");
 const hide=id=>$(id).classList.add("hidden");
 
 function esc(s){
+  // Single quotes matter too: several call sites interpolate into
+  // single-quoted attributes such as onclick="fn('...')".
   return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;")
-    .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    .replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+}
+// Only http(s) links are safe to put in an href. Without this an attacker who
+// can set a URL field turns it into a javascript: payload that runs with the
+// dashboard's session.
+function safeUrl(u){
+  const raw = String(u||"").trim();
+  // Must be an absolute http(s) URL. Resolving against the page would turn an
+  // empty or malformed value into a link back to the dashboard, which is not
+  // dangerous but is a broken link presented as a real download.
+  if(!/^https?:\/\//i.test(raw)) return "";
+  try{
+    const parsed = new URL(raw);
+    return (parsed.protocol==="http:"||parsed.protocol==="https:") ? parsed.href : "";
+  }catch{ return ""; }
 }
 function fmt(dt){
   if(!dt) return "—";
@@ -1647,11 +1663,13 @@ async function checkUpdates(){
   $("updCurrent").textContent="Checking…"; $("updLatest").textContent="…";
   try{
     const d=await apiFetch("/update/check",{headers:authH()});
-    $("updCurrent").innerHTML=`Version <strong>${d.current_version}</strong> — commit <code>${d.current_commit}</code>`;
+    // These strings come from the GitHub API and from git output, i.e. from
+    // outside this system — escape them like any other untrusted input.
+    $("updCurrent").innerHTML=`Version <strong>${esc(d.current_version)}</strong> — commit <code>${esc(d.current_commit)}</code>`;
     const lr=d.latest_release||{};
     $("updLatest").innerHTML=lr.tag&&lr.tag!=="not configured"
-      ?`<strong>${lr.tag}</strong>${lr.published_at?" ("+lr.published_at.split("T")[0]+")":""}`
-      :`<span class="muted">${lr.tag||"—"}</span>`;
+      ?`<strong>${esc(lr.tag)}</strong>${lr.published_at?" ("+esc(String(lr.published_at).split("T")[0])+")":""}`
+      :`<span class="muted">${esc(lr.tag||"—")}</span>`;
     if(lr.notes){$("updNotes").textContent=lr.notes;$("updNotes").style.display="block";}
     else $("updNotes").style.display="none";
     $("applyBtn").style.display=d.update_available?"":"none";
@@ -1677,7 +1695,7 @@ async function loadClientVersionAdmin(){
   try{
     const d = await apiFetch("/client/version",{headers:authH()});
     $("clientVerCurrent").innerHTML = `<strong>v${esc(d.latest_version)}</strong>`+
-      (d.download_url?` — <a href="${esc(d.download_url)}" target="_blank" rel="noopener">download link</a>`:` — no download link set yet`)+
+      (safeUrl(d.download_url)?` — <a href="${esc(safeUrl(d.download_url))}" target="_blank" rel="noopener noreferrer">download link</a>`:` — no download link set yet`)+
       (d.mandatory?` <span class="chat-sess-badge csb-active">Mandatory</span>`:``);
   }catch{ $("clientVerCurrent").textContent="Unable to load."; }
 }
@@ -1960,7 +1978,7 @@ async function loadKBArticles(){
           <div class="sm muted">${esc(a.category||"—")} · ${esc(a.article_type)}${a.source==="ai_generated"?' · <span class="kb-src">AI DRAFT</span>':''}</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
-          <span class="kb-status kbs-${a.workflow_status}">${esc(a.workflow_status)}</span>
+          <span class="kb-status kbs-${esc(a.workflow_status)}">${esc(a.workflow_status)}</span>
           <button class="btn btn-ghost btn-xs" onclick="openArticle(${a.id})">Open</button>
         </div>
       </div>`).join("");
@@ -1978,7 +1996,7 @@ async function openArticle(id){
     $("kbmTitleInp").value=a.title;
     $("kbmCat").value=a.category||"";
     $("kbmContent").value=a.content;
-    $("kbmBadges").innerHTML=`<span class="kb-status kbs-${a.workflow_status}">${esc(a.workflow_status)}</span>`+
+    $("kbmBadges").innerHTML=`<span class="kb-status kbs-${esc(a.workflow_status)}">${esc(a.workflow_status)}</span>`+
       (a.source==="ai_generated"?' <span class="kb-src">AI-GENERATED DRAFT — REVIEW REQUIRED</span>':'')+
       (a.approved_by?` <span class="sm muted">approved by ${esc(a.approved_by)}</span>`:'');
     $("kbAdminActions").classList.toggle("hidden", S.role!=="super_admin");
