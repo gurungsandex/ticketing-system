@@ -104,6 +104,14 @@ RATE_LIMIT_ATTACHMENT = int(os.environ.get("RATE_LIMIT_ATTACHMENT", "30"))      
 RATE_LIMIT_LOGIN = int(os.environ.get("RATE_LIMIT_LOGIN", "10"))                     # per window / IP
 RATE_LIMIT_WINDOW_SECONDS = int(os.environ.get("RATE_LIMIT_WINDOW_SECONDS", "60"))
 
+# ── Self-update ───────────────────────────────────────
+# The admin dashboard can pull new code and restart the process in place.
+# Whatever the git remote serves then executes as the server user, so this is
+# a remote-code-execution path gated on one admin account staying uncompromised
+# -- and it silently bypasses whatever review/staging your normal deploy has.
+# Disabled by default; opt in only where a managed deploy isn't available.
+ALLOW_SELF_UPDATE = _bool_env("ALLOW_SELF_UPDATE", False)
+
 # ── Uploads ───────────────────────────────────────────
 MAX_UPLOAD_BYTES = int(os.environ.get("MAX_UPLOAD_BYTES", str(10 * 1024 * 1024)))  # 10 MB
 

@@ -12,6 +12,7 @@ import subprocess
 import sys
 import threading
 
+import config
 import models
 import requests as http_requests
 from auth import require_super_admin
@@ -72,19 +73,49 @@ def _get_latest_github_release() -> dict:
         return {"tag": "unknown", "notes": f"Could not reach GitHub: {e}"}
 
 
-def _do_git_pull() -> tuple:
+def _run_git(args: list, timeout: int = 60) -> tuple:
+    """Run a git command in the project root. Returns (ok, combined output)."""
     try:
         r = subprocess.run(
-            ["git", "pull", "--rebase"],
-            cwd=_PROJECT_ROOT, capture_output=True, text=True, timeout=60,
+            ["git", *args],
+            cwd=_PROJECT_ROOT, capture_output=True, text=True, timeout=timeout,
         )
         return r.returncode == 0, (r.stdout + r.stderr).strip()
     except FileNotFoundError:
         return False, "git not found. Install Git and add it to PATH."
     except subprocess.TimeoutExpired:
-        return False, "git pull timed out after 60 seconds."
-    except Exception as e:
+        return False, f"git {args[0]} timed out after {timeout} seconds."
+    except Exception as e:  # pragma: no cover - defensive
         return False, str(e)
+
+
+def _do_git_pull() -> tuple:
+    """Fetch and fast-forward only.
+
+    Deliberately NOT `git pull --rebase`. A rebase rewrites local commits and
+    can stop half-done in a conflicted state, leaving the running deployment on
+    a tree that matches neither the old nor the new release. `merge --ff-only`
+    either advances cleanly to the fetched commit or changes nothing at all,
+    which is the behaviour you want from a button that restarts production.
+    """
+    ok, out = _run_git(["fetch", "--no-tags", "origin"])
+    if not ok:
+        return False, f"git fetch failed: {out}"
+
+    ok, upstream = _run_git(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"])
+    if not ok:
+        return False, (
+            "This checkout has no upstream branch configured, so there is "
+            "nothing safe to fast-forward to."
+        )
+
+    ok, out = _run_git(["merge", "--ff-only", upstream.strip()])
+    if not ok:
+        return False, (
+            f"Fast-forward to {upstream.strip()} failed -- the server checkout has "
+            f"diverged from the remote and needs manual review: {out}"
+        )
+    return True, out
 
 
 def _restart_server():
@@ -102,6 +133,7 @@ def check_for_updates(_admin: models.AdminUser = Depends(require_super_admin)):
         "current_commit": _get_current_commit() if is_git else "N/A",
         "latest_release": latest,
         "git_available": is_git,
+        "self_update_enabled": config.ALLOW_SELF_UPDATE,
         "repo": GITHUB_REPO,
         "update_available": (
             GITHUB_REPO != "YOUR_ORG/YOUR_REPO"
@@ -113,6 +145,17 @@ def check_for_updates(_admin: models.AdminUser = Depends(require_super_admin)):
 
 @router.post("/update/apply")
 def apply_update(_admin: models.AdminUser = Depends(require_super_admin)):
+    if not config.ALLOW_SELF_UPDATE:
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "In-place self-update is disabled. Pulling code and restarting "
+                "executes whatever the git remote serves as the server user, so "
+                "it is off unless explicitly enabled. Deploy through your normal "
+                "release process, or set ALLOW_SELF_UPDATE=true in .env and "
+                "restart the server to re-enable this button."
+            ),
+        )
     if not _is_git_repo():
         raise HTTPException(
             status_code=400,
