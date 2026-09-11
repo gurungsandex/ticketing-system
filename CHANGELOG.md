@@ -47,11 +47,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
   and `os.execv`'d the process, executing whatever the git remote served as the
   server user. Now gated behind `ALLOW_SELF_UPDATE` (default `false`), and
   `fetch` + `merge --ff-only` rather than `git pull --rebase` when enabled.
-- **Client secret moved to the OS credential store.** The `client_id`, which the
-  public chat endpoints treat as a bearer secret, moved from plaintext
-  `client_id.txt` to Windows Credential Manager / macOS Keychain via `keyring`.
-  Existing installs migrate on first launch, and the file is removed only after
-  the value reads back successfully.
 
 ### Fixed — client auto-start
 - Auto-start was implemented twice (startup self-heal and tray toggle) and had

@@ -24,7 +24,7 @@ out by one line in a log.
 | Windows background daemon | `logs/server.log`, written by `server_daemon.py` |
 | Client settings | Windows `%APPDATA%\HelpdeskClient\settings.json` · macOS `~/Library/Application Support/HelpdeskClient/settings.json` |
 | Client offline queue | same directory, `offline_queue.json` |
-| Client identity (legacy installs) | same directory, `client_id.txt` — after upgrade this moves into Credential Manager / Keychain and the file is removed |
+| Client identity | same directory, `client_id.txt` |
 | Windows auto-start entry | `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`, value `ITTicketingClient` |
 | macOS auto-start entry | `~/Library/LaunchAgents/com.ticketing.helpdesk.client.plist` |
 

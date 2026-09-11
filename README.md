@@ -376,7 +376,6 @@ Distribute the built binary to end-user workstations. The app registers itself f
 - Staff JWTs are accepted **only** in the `Authorization` header, never in a URL query string (WebSocket handshakes excepted — the browser API cannot send headers)
 - `X-Forwarded-For` is trusted only from proxies listed in `TRUSTED_PROXY_IPS`, so the login limiter cannot be bypassed by forging the header
 - In-place self-update is disabled unless `ALLOW_SELF_UPDATE=true`, and is fast-forward only when enabled
-- The desktop client stores its `client_id` in Windows Credential Manager / macOS Keychain, not a plaintext file
 - AI-generated knowledge-base content is never auto-published — it requires admin approval
 - Privileged actions are recorded to an append-only audit trail (`GET /audit`, super_admin only) holding identifiers and outcomes only — never ticket text, chat messages, passwords or tokens
 
