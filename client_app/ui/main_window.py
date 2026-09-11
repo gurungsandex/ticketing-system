@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
 )
 
 import api_client
+import autostart
 import settings as app_settings
 from config import APP_NAME
 from ui.chat_dialog import ChatDialog
@@ -214,69 +215,17 @@ class MainWindow(QMainWindow):
         self._disable_act.setVisible(enabled)
 
     def _is_autostart_enabled(self) -> bool:
-        import sys as _sys
-        if _sys.platform == "darwin":
-            from pathlib import Path
-            return (Path.home() / "Library" / "LaunchAgents" / "com.ticketing.helpdesk.client.plist").exists()
-        else:
-            try:
-                import winreg
-                k = winreg.OpenKey(winreg.HKEY_CURRENT_USER,
-                    r"Software\Microsoft\Windows\CurrentVersion\Run", 0, winreg.KEY_READ)
-                try: winreg.QueryValueEx(k, "ITTicketingClient"); winreg.CloseKey(k); return True
-                except FileNotFoundError: winreg.CloseKey(k); return False
-            except Exception: return False
+        return autostart.is_enabled()
 
     def _enable_autostart(self):
-        import sys as _sys
-        if _sys.platform == "darwin":
-            try:
-                from pathlib import Path
-                exe = sys.executable if getattr(sys, "frozen", False) else os.path.abspath(sys.argv[0])
-                plist_dir = Path.home() / "Library" / "LaunchAgents"
-                plist_dir.mkdir(parents=True, exist_ok=True)
-                (plist_dir / "com.ticketing.helpdesk.client.plist").write_text(
-                    f"""<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
-  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>Label</key><string>com.ticketing.helpdesk.client</string>
-    <key>ProgramArguments</key>
-    <array><string>{exe}</string></array>
-    <key>RunAtLoad</key><true/>
-    <key>KeepAlive</key><false/>
-</dict>
-</plist>""", encoding="utf-8")
-            except Exception: pass
-        else:
-            try:
-                import winreg
-                exe = sys.executable if getattr(sys, "frozen", False) else sys.argv[0]
-                k = winreg.OpenKey(winreg.HKEY_CURRENT_USER,
-                    r"Software\Microsoft\Windows\CurrentVersion\Run", 0, winreg.KEY_SET_VALUE)
-                winreg.SetValueEx(k, "ITTicketingClient", 0, winreg.REG_SZ, exe)
-                winreg.CloseKey(k)
-            except Exception: pass
+        # Shared with the startup self-heal so both write identical entries --
+        # this used to be a second implementation that wrote an UNQUOTED path
+        # (broken for "C:\\Program Files\\...") and disagreed about KeepAlive.
+        autostart.enable()
         self._update_autostart_menu()
 
     def _disable_autostart(self):
-        import sys as _sys
-        if _sys.platform == "darwin":
-            try:
-                from pathlib import Path
-                plist = Path.home() / "Library" / "LaunchAgents" / "com.ticketing.helpdesk.client.plist"
-                if plist.exists(): plist.unlink()
-            except Exception: pass
-        else:
-            try:
-                import winreg
-                k = winreg.OpenKey(winreg.HKEY_CURRENT_USER,
-                    r"Software\Microsoft\Windows\CurrentVersion\Run", 0, winreg.KEY_SET_VALUE)
-                try: winreg.DeleteValue(k, "ITTicketingClient")
-                except FileNotFoundError: pass
-                winreg.CloseKey(k)
-            except Exception: pass
+        autostart.disable()
         self._update_autostart_menu()
 
     def _on_tray_activated(self, reason):
