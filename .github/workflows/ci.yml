@@ -32,7 +32,7 @@ jobs:
           pip install ruff httpx pytest pytest-asyncio
 
       - name: Lint with ruff
-        run: ruff check backend/ scripts/ --config pyproject.toml
+        run: ruff check . --config pyproject.toml
 
       - name: Check no secrets in source
         run: |
@@ -63,7 +63,11 @@ jobs:
 
     steps:
       - name: Checkout code
+        # Full history: the secret scan below inspects every commit, not just
+        # the tip. A secret removed in the latest commit is still a secret.
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -71,11 +75,85 @@ jobs:
           python-version: "3.12"
           cache: pip
 
-      - name: Install bandit
-        run: pip install bandit
+      - name: Install security tooling
+        run: pip install bandit pip-audit
 
       - name: Run bandit security scan
-        run: bandit -r backend/ -ll --exclude backend/helpdesk.db
+        run: bandit -r backend/ client_app/ scripts/ server_daemon.py -ll
+
+      - name: Audit dependencies for known vulnerabilities
+        # Non-blocking: an advisory with no released fix (as is currently the
+        # case for ecdsa, pulled in by python-jose) would otherwise wedge every
+        # build with nothing a PR could do about it. Findings are surfaced in
+        # the job summary and triaged in SECURITY.md.
+        continue-on-error: true
+        run: |
+          echo "### Backend dependencies" >> "$GITHUB_STEP_SUMMARY"
+          pip-audit -r backend/requirements.txt >> "$GITHUB_STEP_SUMMARY" 2>&1 || true
+          echo "### Client dependencies" >> "$GITHUB_STEP_SUMMARY"
+          pip-audit -r client_app/requirements.txt >> "$GITHUB_STEP_SUMMARY" 2>&1 || true
+
+      - name: Scan git history for secrets
+        # The working tree being clean says nothing about what is still
+        # retrievable from an earlier commit, so this scans every commit on
+        # every ref, not just the tip.
+        #
+        # One value is allowlisted: "HELPDESK_SECRET_KEY_CHANGE_IN_PRODUCTION",
+        # the placeholder default this project shipped before v1.1. It is in
+        # history permanently — purging it would mean rewriting published
+        # history and breaking every existing clone — and it is not a live
+        # credential: config.py explicitly rejects it, so a deployment cannot
+        # sign tokens with it even if someone sets it. It is documented in
+        # SECURITY.md. Any OTHER match fails the build.
+        run: |
+          set -uo pipefail
+          PATTERN='AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9]{20,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|xox[baprs]-[A-Za-z0-9-]{10,}|eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.'
+          HITS=$(git log --all -p --no-color \
+                   | grep -E "^\+" \
+                   | grep -vE "^\+\+\+" \
+                   | grep -EIn "$PATTERN" \
+                   | grep -v "HELPDESK_SECRET_KEY_CHANGE_IN_PRODUCTION" || true)
+          if [ -n "$HITS" ]; then
+            echo "::error::Secret-like values found in git history:"
+            echo "$HITS" | head -40
+            exit 1
+          fi
+          echo "No unreviewed secrets found in git history."
+
+      - name: Report the known historical placeholder
+        # Visibility without a failing build: if this ever stops matching,
+        # the allowlist above is dead code and should be removed.
+        run: |
+          COUNT=$(git log --all -p --no-color \
+                    | grep -cE "^\+.*HELPDESK_SECRET_KEY_CHANGE_IN_PRODUCTION" || true)
+          echo "Known historical placeholder occurrences in history: $COUNT" \
+            >> "$GITHUB_STEP_SUMMARY"
+          echo "See SECURITY.md - rejected at runtime by backend/config.py." \
+            >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Scan working tree for secrets
+        run: |
+          pip install detect-secrets
+          detect-secrets scan --all-files \
+            --exclude-files '\.git/' \
+            --exclude-files 'tests/' \
+            --exclude-files 'scripts/init_db\.py' \
+            --exclude-files '\.github/workflows/' \
+            --exclude-files '\.pytest_cache/' \
+            --exclude-files '\.ruff_cache/' \
+            > /tmp/secrets.json
+          python - <<'EOF'
+          import json, sys
+          with open("/tmp/secrets.json") as fh:
+              results = json.load(fh).get("results", {})
+          if results:
+              print("::error::Potential secrets in the working tree:")
+              for path, items in results.items():
+                  for item in items:
+                      print(f"  {path}:{item.get('line_number')} {item.get('type')}")
+              sys.exit(1)
+          print("No secrets found in the working tree.")
+          EOF
 
   validate-env-example:
     name: Validate .env.example
