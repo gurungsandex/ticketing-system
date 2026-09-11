@@ -84,12 +84,35 @@ _limiter = RateLimiter()
 
 
 def client_ip(request: Request) -> str:
-    """Best-effort client IP. Honours the first X-Forwarded-For hop for
-    deployments behind a trusted reverse proxy, else the socket peer."""
+    """Return the IP that rate limiting should key on.
+
+    X-Forwarded-For is supplied by the caller and can be forged, so trusting it
+    unconditionally lets anyone rotate their apparent IP and walk straight past
+    the login limiter. It is therefore honoured only when BOTH hold:
+
+      * config.TRUSTED_PROXY_IPS is configured, and
+      * the actual socket peer is one of those proxies.
+
+    When it is honoured we walk the header right-to-left and return the first
+    hop that is not itself a trusted proxy. The rightmost entries are the ones
+    appended by our own infrastructure; anything the client pre-seeded sits to
+    the LEFT of those, so right-to-left is what resists forgery (reading the
+    leftmost entry would trust exactly the part an attacker controls).
+
+    With no proxy configured we use the socket peer, which cannot be spoofed.
+    """
+    peer = request.client.host if request.client else "unknown"
+
+    if not config.TRUSTED_PROXY_IPS or peer not in config.TRUSTED_PROXY_IPS:
+        return peer
+
     fwd = request.headers.get("x-forwarded-for")
-    if fwd:
-        return fwd.split(",")[0].strip()
-    return request.client.host if request.client else "unknown"
+    if not fwd:
+        return peer
+    for hop in reversed([h.strip() for h in fwd.split(",") if h.strip()]):
+        if hop not in config.TRUSTED_PROXY_IPS:
+            return hop
+    return peer
 
 
 def rate_limit(request: Request, bucket: str, limit: int) -> None:

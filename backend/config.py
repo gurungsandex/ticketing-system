@@ -82,6 +82,19 @@ CORS_ORIGINS_RAW = os.environ.get("CORS_ORIGINS", "*")
 CORS_ORIGINS = [o.strip() for o in CORS_ORIGINS_RAW.split(",") if o.strip()]
 CORS_ALLOW_ALL = CORS_ORIGINS == ["*"] or not CORS_ORIGINS
 
+# Reverse-proxy trust. X-Forwarded-For is attacker-controlled unless the
+# request demonstrably came from a proxy we trust, so it is IGNORED by default:
+# an unset value means rate limiting keys on the real socket peer, which is
+# correct for a directly-exposed LAN server and cannot be spoofed.
+#
+# Set this to the proxy's IP(s) ONLY when the app sits behind a reverse proxy
+# (nginx/Caddy/IIS/load balancer). Leaving it unset behind a proxy would make
+# every client share the proxy's IP and trip the shared limit; setting it when
+# there is no proxy would let anyone forge their apparent IP. Comma-separated.
+TRUSTED_PROXY_IPS = {
+    ip.strip() for ip in os.environ.get("TRUSTED_PROXY_IPS", "").split(",") if ip.strip()
+}
+
 # ── Rate limiting (in-memory, per-process) ────────────
 # Sensible defaults that stop spam/DoS on the intentionally-unauthenticated
 # public endpoints without hindering normal use. Tunable via env.
