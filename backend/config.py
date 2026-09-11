@@ -105,4 +105,16 @@ MAX_NOTE_LEN = int(os.environ.get("MAX_NOTE_LEN", "5000"))
 MAX_CHAT_MESSAGE_LEN = int(os.environ.get("MAX_CHAT_MESSAGE_LEN", "4000"))
 MAX_GENERIC_TEXT_LEN = int(os.environ.get("MAX_GENERIC_TEXT_LEN", "300"))
 
+# ── Self-update ───────────────────────────────────────
+# "Apply Update" makes the server run whatever code the configured git remote
+# serves and then restarts into it. That is remote code execution by design, so
+# it is OFF unless an operator deliberately turns it on. Anyone who obtains a
+# super_admin session on a server with this enabled owns the host.
+SELF_UPDATE_ENABLED = _bool_env("SELF_UPDATE_ENABLED", False)
+
+# Repository the server is allowed to update from, as "owner/repo". The remote
+# configured in the checkout must match this, so a tampered remote cannot
+# redirect the update to attacker-controlled code.
+GITHUB_REPO = os.environ.get("GITHUB_REPO", "").strip()
+
 VERSION = "1.1.0"
