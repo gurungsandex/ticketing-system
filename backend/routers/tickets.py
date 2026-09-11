@@ -10,7 +10,7 @@ from database import get_db
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import Response
 from security import ALLOWED_MIMES, detect_content_type, rate_limit
-from sqlalchemy import update
+from sqlalchemy import func, update
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session
 from utils import utcnow
@@ -208,8 +208,22 @@ async def upload_attachment(
 
 # ── STAFF: List all tickets ───────────────────────────
 
-def _to_detail(db: Session, t: models.Ticket) -> schemas.TicketDetail:
-    nc = db.query(models.Note).filter(models.Note.ticket_id == t.id).count()
+def _note_counts(db: Session) -> dict:
+    """Notes per ticket, as a single aggregate.
+
+    Deliberately not filtered to the tickets being rendered: a WHERE ... IN
+    over a full listing can exceed SQLite's bound-parameter limit, and the
+    GROUP BY is one indexed scan either way. Tickets with no notes are simply
+    absent from the result and default to 0.
+    """
+    return dict(
+        db.query(models.Note.ticket_id, func.count(models.Note.id))
+        .group_by(models.Note.ticket_id)
+        .all()
+    )
+
+
+def _to_detail(t: models.Ticket, notes_count: int = 0) -> schemas.TicketDetail:
     return schemas.TicketDetail(
         id=t.id, client_id=t.client_id, username=t.username,
         ip_address=t.ip_address, hostname=t.hostname,
@@ -219,7 +233,7 @@ def _to_detail(db: Session, t: models.Ticket) -> schemas.TicketDetail:
         location=t.location, device=t.device,
         resolution_summary=t.resolution_summary, resolved_at=t.resolved_at,
         assigned_to=t.assigned_to, created_at=t.created_at,
-        updated_at=t.updated_at, notes_count=nc,
+        updated_at=t.updated_at, notes_count=notes_count,
     )
 
 
@@ -258,7 +272,11 @@ def list_tickets(
             raise HTTPException(status_code=400, detail="Invalid date_to. Use YYYY-MM-DD")
 
     tickets = q.order_by(models.Ticket.created_at.desc()).all()
-    return [_to_detail(db, t) for t in tickets]
+    # One aggregate for the whole page instead of a COUNT per row -- the
+    # dashboards poll this endpoint every 20-30s per open tab, so the number of
+    # round-trips must not grow with the ticket count.
+    counts = _note_counts(db)
+    return [_to_detail(t, counts.get(t.id, 0)) for t in tickets]
 
 
 # ── STAFF: Get single ticket ──────────────────────────
@@ -274,7 +292,8 @@ def get_ticket(
         raise HTTPException(status_code=404, detail="Ticket not found")
     if current_user.role == "technician" and t.assigned_to != current_user.username:
         raise HTTPException(status_code=403, detail="You are not assigned to this ticket.")
-    return _to_detail(db, t)
+    nc = db.query(models.Note).filter(models.Note.ticket_id == t.id).count()
+    return _to_detail(t, nc)
 
 
 # ── RBAC: Update status (admin OR assigned technician) ─
