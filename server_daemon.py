@@ -1,11 +1,16 @@
 """
-IT Ticketing System — Windows background server daemon.
-Launched by setup.bat via pythonw.exe (no console window).
-Restarts uvicorn automatically if it crashes.
+IT Ticketing System — background server daemon.
+
+Launched by setup.bat via pythonw.exe on Windows (no console window). Restarts
+uvicorn automatically if it crashes.
+
+The no-console creation flag only exists on Windows; passing it on macOS/Linux
+raises ValueError, so it is applied conditionally and this module stays usable
+for manual supervised runs on any platform.
 """
+import os
 import subprocess
 import sys
-import os
 import time
 from pathlib import Path
 
@@ -14,21 +19,27 @@ BACKEND = ROOT / "backend"
 LOG     = ROOT / "logs" / "server.log"
 LOG.parent.mkdir(exist_ok=True)
 
-CREATE_NO_WINDOW = 0x08000000
+HOST = os.environ.get("HOST", "0.0.0.0")  # nosec B104 - LAN server binds all interfaces by design
+PORT = os.environ.get("PORT", "8000")
+
+# CREATE_NO_WINDOW is a Windows-only process creation flag.
+_popen_kwargs = {}
+if sys.platform == "win32":
+    _popen_kwargs["creationflags"] = 0x08000000  # CREATE_NO_WINDOW
 
 env = os.environ.copy()
 env["PYTHONIOENCODING"] = "utf-8"
 
 while True:
     with open(LOG, "a", encoding="utf-8") as lf:
-        p = subprocess.Popen(
+        p = subprocess.Popen(  # nosec B603 - fixed argv, no shell, no user input
             [sys.executable, "-m", "uvicorn", "main:app",
-             "--host", "0.0.0.0", "--port", "8000"],
+             "--host", HOST, "--port", str(PORT)],
             cwd=str(BACKEND),
             stdout=lf,
             stderr=lf,
             env=env,
-            creationflags=CREATE_NO_WINDOW,
+            **_popen_kwargs,
         )
         p.wait()
     time.sleep(3)

@@ -8,6 +8,131 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 
 ## [Unreleased]
 
+### Security
+
+- **Session JWTs no longer travel in attachment download URLs.** Both
+  dashboards built download links as `?token=<8-hour session JWT>`. A URL is not
+  a private channel — it lands in browser history, the server's access log,
+  every proxy log on the path, and the `Referer` of whatever the page loads
+  next. Downloads now use a token scoped to a single attachment that expires in
+  60 seconds, and `get_current_admin` no longer accepts `?token=` at all.
+  Authorisation is re-checked against the live database at download time, so a
+  token minted while a technician was assigned stops working once the ticket is
+  reassigned.
+- **Download tokens cannot authenticate the API.** Session tokens now carry
+  `typ="session"` and any other token type is refused as a credential. Without
+  this, a download token — signed with the same key — would have granted a
+  minute of full API access. Tokens issued before this change carry no type
+  claim and remain valid, so nobody is logged out by the upgrade.
+- **Self-update is disabled by default and pinned to a verified source.**
+  `POST /update/apply` ran `git pull --rebase` and restarted the server into
+  whatever it fetched, reachable by any super_admin on any deployment. It now
+  requires `SELF_UPDATE_ENABLED=true`, requires the checkout's `origin` to point
+  at the configured `GITHUB_REPO` **on github.com** (host and path both pinned,
+  so a redirected remote is refused), pulls fast-forward only, and refuses to
+  run over a dirty working tree.
+- **Fixed DOM XSS in the dashboards.** The Updates tab injected GitHub release
+  tags and git output into `innerHTML` unescaped; the client download link ran
+  through HTML escaping but accepted a `javascript:` URL. Added a URL scheme
+  allowlist, and `esc()` now escapes single quotes as well.
+- **Client identity moved to the OS credential store.** The `client_id` is a
+  bearer secret for reading a machine's ticket statuses and posting into its
+  chat session, and it lived in a plaintext file in the roaming profile. It now
+  lives in Windows Credential Manager / macOS Keychain, with automatic migration
+  from the old file and a documented fallback where no backend is available.
+- **Rate-limited `GET /notifications/{client_id}`**, the one public endpoint
+  that had no limit.
+- **Wildcard CORS now announces itself** at startup with the exact setting to
+  change. The default is unchanged, because tightening it would break
+  dashboards opened from another host.
+
+### Added
+
+- **Real-time live chat.** A `/ws/chat/{session_id}` endpoint existed but
+  nothing used it — both dashboards and the desktop client discovered messages
+  by polling every 2.5–3 seconds. All three now receive messages the moment they
+  are stored, over a new end-user channel (`/ws/chat/client/{session_id}`,
+  scoped by the same session-id + client-id pair as the REST endpoints) and the
+  existing staff channel. Typing indicators in both directions. Sending stays on
+  REST so writes keep a single authorisation path. Polling remains as a
+  fallback at 15s, so a refused WebSocket upgrade degrades rather than breaks.
+- **`docs/TROUBLESHOOTING.md`** — symptom → cause → fix, covering server
+  startup, dashboards, client auto-start, connection and TLS errors, login
+  lockouts, notifications, attachments, SmartScreen/Gatekeeper, antivirus
+  quarantine of PyInstaller builds, updates, and log locations.
+- **Supported-platform tables** in the README for the client (Windows 10 1809+,
+  Windows 11, macOS 11+ on Intel and Apple Silicon), the dashboards (current
+  Edge, Chrome, Firefox, Safari 16.4+), and the server.
+- **Client uninstallers** (`uninstall.bat`, `uninstall.sh`, and
+  `HelpdeskClient --uninstall`) that remove the logon entry, so deleting the app
+  no longer leaves something trying to start a binary that is gone.
+- **CI: dependency auditing and a git-history secret scan.** `pip-audit` over
+  both requirement files (non-blocking — the one current finding has no released
+  fix), and a scan of every commit on every ref rather than just the tip. ruff
+  now lints the whole repo; bandit now covers `client_app/` and
+  `server_daemon.py`.
+- **81 new tests** (30 → 111) covering download-token scoping and expiry,
+  self-update guards, auto-start registration, the single-instance lock, the
+  credential store and its migration, and real-time chat delivery and scoping.
+
+### Fixed
+
+- **Auto-start could not be turned off.** Registration lived in two places that
+  disagreed. "Disable auto-start" was silently undone by the self-healing
+  re-registration on the next launch; Windows wrote the executable path unquoted
+  from one path and quoted from the other, so a client installed under
+  `C:\Program Files\...` either failed to start or churned the registry every
+  launch; and macOS wrote `KeepAlive=false` from one path and `true` from the
+  other, so crash recovery depended on which code ran last. Replaced with a
+  single implementation: a per-user logon Scheduled Task on Windows (with
+  `RestartOnFailure`, falling back to the `Run` key), a `LaunchAgent` with
+  `RunAtLoad` and `KeepAlive` on macOS, a persisted opt-out, and exactly one
+  mechanism active at a time so upgrades cannot leave duplicates.
+- **A crashed client could refuse to start again.** The single-instance guard
+  used shared memory, which on macOS and Linux outlives the process that created
+  it — after a crash every later launch exited immediately and only a reboot
+  cleared it. Replaced with an OS file lock, released automatically on process
+  death.
+- **The dashboards called `http://localhost:8000` regardless of where they were
+  served from.** Anyone opening the dashboard from a machine other than the
+  server loaded a page from the server that then called their own localhost. The
+  panels now use the origin that served them; the hardcoded value is a fallback
+  for `file://` opens only. Every request in a normal deployment is therefore
+  same-origin.
+- **Login could break outright in Safari private windows** and locked-down
+  enterprise profiles, which reject `sessionStorage` writes. Losing persistence
+  across a refresh is now the worst case.
+- **`datetime.utcnow()`** in the update router — deprecated since Python 3.12.
+- **`server_daemon.py` could not run on macOS or Linux**: it passed the
+  Windows-only `CREATE_NO_WINDOW` creation flag unconditionally. It also ignored
+  `HOST`/`PORT`.
+- **Two spurious 404s per dashboard load** (`/favicon.ico` and `/branding/logo`
+  when no custom logo is set), which read like faults in every admin's console.
+- **`ruff check backend/ scripts/` failed on `master`**, so the CI lint job was
+  red before any of this work.
+
+### Changed
+
+- Live chat and notification polling intervals relaxed now that WebSockets carry
+  the traffic (chat thread 3s → 15s as a fallback only).
+- `GITHUB_REPO` moved from a constant edited in `backend/routers/update.py` to
+  an environment variable.
+- `SECURITY.md` now documents deployment requirements and three known, accepted
+  findings with reasoning: the pre-v1.1 placeholder key in git history (not a
+  live credential — `config.py` rejects it), unauthenticated ticket creation,
+  and the unfixable `ecdsa` advisory reached through `python-jose`.
+
+### Upgrade notes
+
+- **"Apply Update" now returns 403** until `SELF_UPDATE_ENABLED=true` and
+  `GITHUB_REPO` are set in `.env`. This is deliberate: the feature should not be
+  live on hosts that never intended to use it. Updating by hand on the server
+  needs no configuration.
+- **The desktop client gains a `keyring` dependency.** Rebuild the client from
+  the updated spec files; `pip install -r client_app/requirements.txt` first.
+- No database migration is required. No action is needed for existing sessions,
+  client identities, or tickets — all migrate in place.
+
 ### Added — Enterprise readiness (1.1)
 - **Live chat**: secure end-user ↔ staff chat with agent presence
   (Available / Busy / Away / Offline), a staff queue with claim, and reusable

@@ -76,3 +76,18 @@ def set_server_url(url: str) -> None:
 def is_configured() -> bool:
     url = get_server_url()
     return bool(url) and "YOUR_SERVER_IP" not in url
+
+
+# ── Generic flags ─────────────────────────────────────
+# Small booleans/scalars that need to survive restarts (e.g. the auto-start
+# opt-out). Kept in the same settings.json so there is one file to inspect or
+# remove when troubleshooting a client.
+
+def get_flag(key: str, default=None):
+    return _load().get(key, default)
+
+
+def set_flag(key: str, value) -> None:
+    data = _load()
+    data[key] = value
+    _save(data)

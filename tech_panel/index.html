@@ -4,6 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>IT Ticketing System — Technician</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%F0%9F%8E%AB%3C/text%3E%3C/svg%3E">
 <style>
 :root{
   --blue:#0D9488;--blue-dk:#0F766E;--blue-lt:#F0FDFA;
@@ -295,6 +296,10 @@ textarea.note-inp:focus{border-color:var(--blue)}
 .chat-empty{flex:1;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:14px}
 .btn-danger{background:#FEF2F2;color:var(--red);border:1px solid #FECACA}
 .btn-danger:hover{background:#FEE2E2}
+
+    /* Live "is typing" hint under the thread. Ephemeral — never persisted. */
+    .chat-typing{ padding:2px 14px 6px; font-size:11px; font-style:italic;
+      color:var(--muted,#64748B); }
 </style>
 </head>
 <body>
@@ -481,10 +486,11 @@ textarea.note-inp:focus{border-color:var(--blue)}
               </div>
             </div>
             <div class="chat-thread" id="chatThread"></div>
+            <div class="chat-typing hidden" id="chatTyping"></div>
             <div class="chat-input-row">
               <div class="chat-input-tools" id="cannedTools"></div>
               <div class="chat-input-send">
-                <textarea id="chatReply" placeholder="Type a reply…  (Enter to send, Shift+Enter for newline)"></textarea>
+                <textarea id="chatReply" placeholder="Type a reply…  (Enter to send, Shift+Enter for newline)" oninput="notifyTyping()"></textarea>
                 <button class="btn btn-blue" onclick="sendChatReply()">Send</button>
               </div>
             </div>
@@ -581,9 +587,19 @@ textarea.note-inp:focus{border-color:var(--blue)}
 
 <script>
 // ═══════════════════════════════════════════
-//  CONFIG — set your server IP here
+//  CONFIG
 // ═══════════════════════════════════════════
-const API = "http://localhost:8000";
+// The panel is normally served by the backend itself (/admin, /tech), so it
+// talks to whatever origin it was loaded from. That makes it work from any
+// machine on the network with no editing, and keeps every request same-origin
+// — which is also why CORS is not needed in the normal deployment.
+//
+// A hardcoded value is only used when the file is opened directly from disk
+// (file://), where there is no origin to inherit. Set API_FALLBACK for that.
+const API_FALLBACK = "http://localhost:8000";
+const API = (location.protocol === "http:" || location.protocol === "https:")
+  ? location.origin
+  : API_FALLBACK;
 
 // ═══════════════════════════════════════════
 //  Session
@@ -608,8 +624,10 @@ function loadSession(){
     return obj;
   }catch{return{token:null,role:null,user:null};}
 }
-function saveSession(d){sessionStorage.setItem(SESSION_KEY,JSON.stringify({...d,expiresAt:Date.now()+IDLE_MS}));}
-function clearSession(){sessionStorage.removeItem(SESSION_KEY);}
+// Safari private mode and locked-down profiles throw on write; losing
+// persistence is acceptable, an uncaught exception breaking login is not.
+function saveSession(d){try{sessionStorage.setItem(SESSION_KEY,JSON.stringify({...d,expiresAt:Date.now()+IDLE_MS}));}catch{}}
+function clearSession(){try{sessionStorage.removeItem(SESSION_KEY);}catch{}}
 
 // ═══════════════════════════════════════════
 //  Utilities
@@ -617,7 +635,9 @@ function clearSession(){sessionStorage.removeItem(SESSION_KEY);}
 const $=id=>document.getElementById(id);
 const show=id=>$(id).classList.remove("hidden");
 const hide=id=>$(id).classList.add("hidden");
-function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+// Single quotes matter too: several call sites interpolate into single-quoted
+// attributes such as onclick="fn('...')".
+function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");}
 function fmt(dt){
   if(!dt) return "—";
   try{const d=new Date(dt.endsWith("Z")?dt:dt+"Z");
@@ -699,7 +719,17 @@ function showPage(p){
 
 window.addEventListener("load",()=>{applyBranding();if(S.token)initDashboard();});
 
-function applyBranding(){
+async function applyBranding(){
+  // Ask whether a logo exists before requesting it. Probing the image
+  // directly logged a 404 in every admin's console on every page load when no
+  // custom logo was configured, which reads like a fault and is not one.
+  try{
+    const status = await fetch(API.replace(/\/$/,"") + "/branding");
+    if(!status.ok) return;
+    const d = await status.json();
+    if(!d.logo_configured) return;   // keep the default emoji in the markup
+  }catch{ return; }
+
   const url = API.replace(/\/$/,"") + "/branding/logo?t=" + Date.now();
   const test = new Image();
   test.onload = ()=>{
@@ -839,10 +869,19 @@ async function loadAttachments(id){
   }catch{el.innerHTML=`<div class="muted sm">Error loading attachments.</div>`;}
 }
 
-function downloadAttachment(id, filename){
+async function downloadAttachment(id, filename){
+  // The session token never goes in a URL: URLs land in browser history,
+  // access logs and proxy logs. Instead we exchange it (over the Authorization
+  // header) for a token that is scoped to this one attachment and expires in
+  // about a minute, and put that in the link.
+  let dl;
+  try{
+    dl = await apiFetch("/attachments/"+id+"/download-token",
+                        {method:"POST",headers:authH()});
+  }catch(e){ alert("Could not start download: "+e.message); return; }
   const url = API.replace(/\/$/,"")
     + "/attachments/" + id + "/download"
-    + "?token=" + encodeURIComponent(S.token);
+    + "?token=" + encodeURIComponent(dl.token);
   const a = document.createElement("a");
   a.href     = url;
   a.download = filename || "attachment";
@@ -1046,7 +1085,81 @@ async function openChatSession(id){
   loadChatSessions(); loadCannedTools();
   await refreshChatThread();
   if(chatPollTimer) clearInterval(chatPollTimer);
-  chatPollTimer=setInterval(()=>{ if(curChat && !$("pgChat").classList.contains("hidden")) refreshChatThread(); },3000);
+  openChatSocket(id);
+  // Slower now that the socket carries the live traffic; this is the safety net.
+  chatPollTimer=setInterval(()=>{ if(curChat && !$("pgChat").classList.contains("hidden")) refreshChatThread(); },15000);
+}
+
+// ── Real-time chat socket ────────────────────────────
+// The thread used to be discovered by a 3-second poll, so a reply could sit
+// unseen for most of that window. The socket pushes each message as it is
+// stored. Polling is deliberately kept running underneath at a slower cadence:
+// if the socket never connects or drops, the conversation degrades to the old
+// behaviour instead of silently going quiet.
+let chatWs = null, chatWsPing = null, chatTypingTimer = null, chatTypingSent = 0;
+
+function closeChatSocket(){
+  if(chatWsPing){ clearInterval(chatWsPing); chatWsPing=null; }
+  if(chatWs){
+    try{ chatWs.onclose=null; chatWs.close(); }catch{}
+    chatWs=null;
+  }
+  hideTyping();
+}
+
+function openChatSocket(sessionId){
+  closeChatSocket();
+  if(!sessionId || !S.token) return;
+  const wsBase = API.replace(/^http/, "ws");
+  let sock;
+  try{
+    sock = new WebSocket(`${wsBase}/ws/chat/${encodeURIComponent(sessionId)}`
+      + `?token=${encodeURIComponent(S.token)}`);
+  }catch{ return; }   // fall back to polling
+  chatWs = sock;
+
+  sock.onopen = ()=>{
+    chatWsPing = setInterval(()=>{ if(sock.readyState===1) sock.send("ping"); }, 25000);
+  };
+  sock.onmessage = (ev)=>{
+    let data; try{ data = JSON.parse(ev.data); }catch{ return; }
+    if(data.type==="pong") return;
+    if(data.type==="typing"){
+      // Only show the other party typing, never our own echo.
+      if(data.sender_role==="user") showTyping(data.sender_name||"User");
+      return;
+    }
+    if(data.session_id && data.session_id!==curChat) return;
+    hideTyping();
+    refreshChatThread();
+  };
+  sock.onclose = ()=>{ if(chatWs===sock){ chatWs=null; } };
+  sock.onerror = ()=>{ try{ sock.close(); }catch{} };
+}
+
+function notifyTyping(){
+  // Throttled: one notice per 2s of continuous typing is enough to drive the
+  // indicator without turning every keystroke into a frame.
+  const now = Date.now();
+  if(chatWs && chatWs.readyState===1 && now-chatTypingSent > 2000){
+    chatTypingSent = now;
+    try{ chatWs.send("typing"); }catch{}
+  }
+}
+
+function showTyping(who){
+  const el=$("chatTyping");
+  if(!el) return;
+  el.textContent = (who||"User") + " is typing…";
+  el.classList.remove("hidden");
+  if(chatTypingTimer) clearTimeout(chatTypingTimer);
+  chatTypingTimer = setTimeout(hideTyping, 4000);
+}
+
+function hideTyping(){
+  const el=$("chatTyping");
+  if(el) el.classList.add("hidden");
+  if(chatTypingTimer){ clearTimeout(chatTypingTimer); chatTypingTimer=null; }
 }
 
 async function refreshChatThread(){

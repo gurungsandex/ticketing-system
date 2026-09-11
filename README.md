@@ -28,18 +28,72 @@ Built with **FastAPI** + **SQLite**. Ships with a browser-based admin dashboard,
 | **Prioritisation** | Low / Normal / High / Urgent with filtering and priority-aware alerts |
 | **Duplicate-proof Numbering** | Atomic per-day counter — safe under simultaneous submissions |
 | **Role-Based Access** | `super_admin` and `technician` roles with separate portals |
-| **Live Chat** | Technician-first routing with admin escalation, presence-aware notifications, canned responses, always-reachable offline messaging |
+| **Live Chat** | Real-time WebSocket delivery with typing indicators; technician-first routing with admin escalation, presence-aware notifications, canned responses, always-reachable offline messaging |
 | **Knowledge Base** | Mines resolved tickets, generates review-only draft articles/playbooks |
 | **Custom Branding** | Upload a PNG/JPEG logo to replace the default icon across both dashboards and the desktop client |
 | **Desktop Client Updates** | Push a new client version + download link from the admin panel; the desktop app checks on startup and prompts end-users |
-| **Real-Time Notifications** | WebSocket bell for staff; polling for desktop client |
+| **Real-Time Notifications** | WebSocket bell for staff; polling for the desktop client |
 | **Admin Dashboard** | Tickets, filters, users, notes, chat, knowledge base — served at `/admin` |
 | **Technician Portal** | Assigned tickets + live chat — served at `/tech` |
-| **Desktop Client** | Windows/macOS system tray app (PySide6) — self-healing autostart |
+| **Desktop Client** | Windows/macOS system tray app (PySide6) — self-healing auto-start, identity stored in Credential Manager / Keychain |
 | **File Attachments** | PDF and image uploads, validated by magic bytes, stored in the database |
 | **Internal Notes** | Per-ticket staff notes visible only to admin/tech |
 | **Retention** | Optional auto-cleanup (off by default; keep full history for auditing) |
 | **Background Server** | Silent background process via `setup.sh` / `setup.bat` |
+
+---
+
+## Supported Platforms
+
+### Desktop client
+
+| Platform | Versions | Architectures | Notes |
+|---|---|---|---|
+| Windows 11 | All supported releases (23H2, 24H2, 25H2) | x64, ARM64 | ARM64 runs the x64 build under emulation |
+| Windows 10 | 1809 and later, including 21H2 and 22H2 (all still-serviced builds) | x64 | Below 1809, PySide6 is unsupported |
+| macOS | 11 Big Sur and later (12, 13, 14, 15, 26) | Intel (x86_64), Apple Silicon (arm64) | Build on the architecture you target, or produce a universal2 build |
+
+Auto-start is per-user and needs no administrator rights: a logon Scheduled Task
+on Windows (falling back to the `HKCU` `Run` key where Task Scheduler is
+restricted by policy), and a `LaunchAgent` with `RunAtLoad` and `KeepAlive` on
+macOS. Published builds are **not code-signed** — see
+[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) for SmartScreen, Gatekeeper
+and antivirus handling.
+
+### Dashboards
+
+| Browser | Supported |
+|---|---|
+| Microsoft Edge | Current and previous stable |
+| Google Chrome | Current and previous stable |
+| Mozilla Firefox | Current stable and current ESR |
+| Safari | 16.4 and later (macOS and iPadOS) |
+
+The panels are plain HTML/CSS/JS with no build step and no external CDN
+dependency, so they work offline on an isolated network. They are served by the
+backend at `/admin` and `/tech` and call whichever origin served them — there is
+nothing to configure per deployment.
+
+### Server
+
+| Component | Requirement |
+|---|---|
+| Python | 3.10, 3.11, or 3.12 (CI covers all three) |
+| OS | Windows, macOS, or Linux |
+| Database | SQLite (bundled) — keep it on local disk, not a network or synced folder |
+
+---
+
+## Documentation
+
+| Guide | For |
+|---|---|
+| [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | End users submitting tickets |
+| [docs/TECHNICIAN_GUIDE.md](docs/TECHNICIAN_GUIDE.md) | Technicians working the queue |
+| [docs/ADMIN_GUIDE.md](docs/ADMIN_GUIDE.md) | Administrators running the system |
+| [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | **Something is broken** — symptom → cause → fix |
+| [docs/SECURITY_ANALYSIS.md](docs/SECURITY_ANALYSIS.md) | Security design and limitations |
+| [SECURITY.md](SECURITY.md) | Reporting a vulnerability; deployment requirements |
 
 ---
 
@@ -99,11 +153,12 @@ ticketing-system/
 │   ├── helpdesk_mac.spec      ← PyInstaller spec — macOS .app
 │   └── ui/
 │       ├── main_window.py     ← Ticket form + tray + settings
-│       └── chat_dialog.py     ← End-user live-chat window
+│       └── chat_dialog.py     ← End-user live-chat window (real-time)
 ├── tests/                     ← pytest suite (numbering, RBAC, security, chat, KB)
 ├── docs/
 │   ├── ADMIN_GUIDE.md
 │   ├── TECHNICIAN_GUIDE.md
+│   ├── TROUBLESHOOTING.md     ← Symptom → cause → fix
 │   ├── USER_GUIDE.md
 │   └── SECURITY_ANALYSIS.md
 ├── scripts/
@@ -302,7 +357,26 @@ python3 -m PyInstaller helpdesk_mac.spec
 # → dist/HelpdeskClient.app
 ```
 
-Distribute the built binary to end-user workstations. The app registers itself for autostart on first launch.
+Distribute the built binary to end-user workstations. The app registers itself
+for login auto-start on first launch, and repairs that registration on every
+subsequent launch if it goes missing.
+
+**Code signing.** Builds are unsigned by default, so Windows SmartScreen and
+macOS Gatekeeper warn on first run and some antivirus engines quarantine
+PyInstaller output. For any deployment beyond a handful of machines, sign the
+binary — it is the single most effective fix for all three problems. See
+[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md#smartscreen-and-gatekeeper-warnings).
+
+**Uninstalling.** Run the uninstaller rather than just deleting the app,
+otherwise the logon entry survives and keeps trying to start a binary that is no
+longer there:
+
+```bash
+client_app/scripts/uninstall.sh        # macOS;  --purge also removes saved data
+client_app\scripts\uninstall.bat       # Windows; /purge also removes saved data
+```
+
+Or, with the executable still present: `HelpdeskClient --uninstall`.
 
 ---
 
@@ -367,8 +441,8 @@ to draft for re-review.
 ## Pre-Deployment Checklist
 
 - [ ] Set a strong `SECRET_KEY` in `.env` (multi-node deployments must share one)
-- [ ] Update `const API = "..."` in both HTML panels
 - [ ] Start server — confirm `/health` returns `{"status":"ok","version":"1.1.0"}`
+- [ ] Reach the dashboards at `http://SERVER:8000/admin` and `/tech` (no per-deployment edit needed — they call the origin that served them)
 - [ ] Log in and change the default `admin` password immediately
 - [ ] Create technician accounts via Admin → Users
 - [ ] Restrict `CORS_ORIGINS` to your server origin
@@ -376,8 +450,9 @@ to draft for re-review.
 - [ ] Decide on `TICKET_RETENTION_DAYS` (0 keeps full history for auditing)
 - [ ] Confirm `backend/secret.key` and `backend/helpdesk.db` are backed up and not committed
 - [ ] (Optional) Build and distribute the desktop client; set `HELPDESK_SERVER_URL` centrally
-- [ ] (Optional) Set `GITHUB_REPO` in `backend/routers/update.py` for auto-updates
-- [ ] (Recommended for internet-facing) Nginx/Caddy reverse proxy for HTTPS
+- [ ] (Optional) Set `GITHUB_REPO` and `SELF_UPDATE_ENABLED=true` in `.env` to allow dashboard-triggered updates — leave off unless you need it, since it lets a dashboard session replace the server's code
+- [ ] (Recommended) Nginx/Caddy reverse proxy for HTTPS — forward WebSocket upgrade headers and `X-Forwarded-For`, and set `HOST=127.0.0.1` behind it
+- [ ] (Recommended) Sign the desktop client binary before wide distribution
 
 ---
 
@@ -387,7 +462,11 @@ Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) before
 
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feat/your-feature`
-3. Make your changes and run the linter: `ruff check backend/ scripts/ --config pyproject.toml`
+3. Make your changes, then run the linter and tests:
+   ```bash
+   ruff check . --config pyproject.toml
+   cd backend && pytest ../tests/ -q
+   ```
 4. Open a pull request against `master`
 
 Report bugs or request features via [GitHub Issues](https://github.com/gurungsandex/ticketing-system/issues).

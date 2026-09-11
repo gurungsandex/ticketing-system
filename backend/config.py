@@ -90,6 +90,9 @@ RATE_LIMIT_TICKET_CREATE = int(os.environ.get("RATE_LIMIT_TICKET_CREATE", "20"))
 RATE_LIMIT_ATTACHMENT = int(os.environ.get("RATE_LIMIT_ATTACHMENT", "30"))          # per window / IP
 RATE_LIMIT_LOGIN = int(os.environ.get("RATE_LIMIT_LOGIN", "10"))                     # per window / IP
 RATE_LIMIT_WINDOW_SECONDS = int(os.environ.get("RATE_LIMIT_WINDOW_SECONDS", "60"))
+# The tray client polls every 30s, so this is generous for real use while
+# still capping enumeration attempts against the client_id namespace.
+RATE_LIMIT_CLIENT_POLL = int(os.environ.get("RATE_LIMIT_CLIENT_POLL", "60"))
 
 # ── Uploads ───────────────────────────────────────────
 MAX_UPLOAD_BYTES = int(os.environ.get("MAX_UPLOAD_BYTES", str(10 * 1024 * 1024)))  # 10 MB
@@ -104,5 +107,17 @@ MAX_DESCRIPTION_LEN = int(os.environ.get("MAX_DESCRIPTION_LEN", "5000"))
 MAX_NOTE_LEN = int(os.environ.get("MAX_NOTE_LEN", "5000"))
 MAX_CHAT_MESSAGE_LEN = int(os.environ.get("MAX_CHAT_MESSAGE_LEN", "4000"))
 MAX_GENERIC_TEXT_LEN = int(os.environ.get("MAX_GENERIC_TEXT_LEN", "300"))
+
+# ── Self-update ───────────────────────────────────────
+# "Apply Update" makes the server run whatever code the configured git remote
+# serves and then restarts into it. That is remote code execution by design, so
+# it is OFF unless an operator deliberately turns it on. Anyone who obtains a
+# super_admin session on a server with this enabled owns the host.
+SELF_UPDATE_ENABLED = _bool_env("SELF_UPDATE_ENABLED", False)
+
+# Repository the server is allowed to update from, as "owner/repo". The remote
+# configured in the checkout must match this, so a tampered remote cannot
+# redirect the update to attacker-controlled code.
+GITHUB_REPO = os.environ.get("GITHUB_REPO", "").strip()
 
 VERSION = "1.1.0"
