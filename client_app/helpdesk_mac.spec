@@ -15,6 +15,8 @@ a = Analysis(
         'requests',
         'uuid',
         'socket',
+        'keyring',
+        'keyring.backends.macOS',
     ],
     hookspath=[],
     hooksconfig={},
