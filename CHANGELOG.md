@@ -8,6 +8,64 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 
 ## [Unreleased]
 
+### Security — hardening pass
+- **Rate-limit bypass closed.** `X-Forwarded-For` was trusted unconditionally,
+  so any caller could rotate the header and walk past the login brute-force
+  limiter. It is now honoured only when the real socket peer is listed in the
+  new `TRUSTED_PROXY_IPS` setting, and the chain is walked right-to-left to the
+  first untrusted hop.
+- **Staff JWTs are no longer accepted from the URL.** `get_current_admin()` took
+  a `?token=` query parameter, and both dashboards used it for attachment
+  downloads — writing a full-privilege token into every access log on the path,
+  browser history and `Referer`. Authentication is header-only for all HTTP
+  routes; the dashboards fetch attachments with an `Authorization` header and a
+  blob URL. WebSocket handshakes still use a query token, as the browser
+  WebSocket API cannot send headers.
+- **In-place self-update disabled by default.** `POST /update/apply` pulled code
+  and `os.execv`'d the process, executing whatever the git remote served as the
+  server user. Now gated behind `ALLOW_SELF_UPDATE` (default `false`), and
+  `fetch` + `merge --ff-only` rather than `git pull --rebase` when enabled.
+- **Client secret moved to the OS credential store.** The `client_id`, which the
+  public chat endpoints treat as a bearer secret, moved from plaintext
+  `client_id.txt` to Windows Credential Manager / macOS Keychain via `keyring`.
+  Existing installs migrate on first launch, and the file is removed only after
+  the value reads back successfully.
+
+### Fixed — client auto-start
+- Auto-start was implemented twice (startup self-heal and tray toggle) and had
+  drifted apart. Consolidated into `client_app/autostart.py`, fixing three
+  defects in the tray path: an **unquoted** executable path that silently broke
+  auto-start for installs under `C:\Program Files\...`; `KeepAlive=false`
+  contradicting the other implementation; and a macOS source-checkout entry that
+  omitted the interpreter and could never launch.
+- macOS `KeepAlive` is now `{SuccessfulExit: false}` — the client returns after a
+  crash but honours a deliberate tray Quit.
+- Both callers emit byte-identical entries, so an upgrade replaces the entry
+  instead of leaving a stale second one.
+
+### Fixed
+- Deprecated `datetime.utcnow()` replaced with the timezone-correct
+  `utils.utcnow()` helper (`backend/routers/update.py`).
+- `ruff` is clean across `backend/`, `scripts/`, `tests/` and `client_app/`
+  (import ordering, three unused Qt imports).
+
+### Added — documentation
+- `docs/TROUBLESHOOTING.md`: symptom → cause → fix covering server startup,
+  connection/TLS errors, login lockouts, client auto-start, notifications,
+  attachments, SmartScreen/Gatekeeper, antivirus quarantine of PyInstaller
+  builds, and log locations.
+- README: supported-OS matrix for server, desktop client (incl. the Windows 10
+  1809 floor imposed by PySide6 6.11, and Apple Silicon build guidance) and
+  browsers.
+- `.env.example` documents `TRUSTED_PROXY_IPS` and `ALLOW_SELF_UPDATE`.
+
+### Tests
+- 30 → 63. New coverage: reverse-proxy header trust, rejection of URL-borne
+  tokens, self-update gating, client credential-store migration (including a
+  backend that accepts a write but does not persist it), and autostart
+  registration/idempotency/upgrade behaviour.
+
+
 ### Added — Enterprise readiness (1.1)
 - **Live chat**: secure end-user ↔ staff chat with agent presence
   (Available / Busy / Away / Offline), a staff queue with claim, and reusable

@@ -127,6 +127,54 @@ ticketing-system/
 
 ---
 
+## Supported Platforms
+
+### Server
+
+| Platform | Status |
+|---|---|
+| Linux (any distro with Python 3.10+) | ✅ Supported — CI runs Python 3.10, 3.11, 3.12 |
+| macOS 11+ | ✅ Supported |
+| Windows 10 / 11 / Server 2019+ | ✅ Supported (`setup.bat` + `server_daemon.py`) |
+
+### Desktop client
+
+| Platform | Architecture | Status |
+|---|---|---|
+| Windows 11 (all versions) | x64 / ARM64 | ✅ Supported |
+| Windows 10 1809 and later, incl. 22H2 | x64 | ✅ Supported |
+| Windows 10 LTSC 2019 / 2021 | x64 | ✅ Supported (both are 1809+) |
+| Windows 10 1507–1803, LTSB 2015/2016 | x64 | ⚠️ Not supported by the shipped build — see note |
+| macOS 11 Big Sur → 15 Sequoia | Intel + Apple Silicon | ✅ Supported |
+| macOS 10.15 and earlier | Intel | ❌ Not supported |
+
+> **Windows 10 floor.** The client is built against PySide6 6.11, whose Qt
+> runtime requires **Windows 10 1809 or later**. Versions below that (1507,
+> 1607/LTSB, 1703–1803) cannot run the shipped binary. If you must cover them,
+> pin an older PySide6 (Qt 5-era) and build separately — that is a distinct
+> build target, not a configuration switch.
+>
+> **Apple Silicon.** Build on the architecture you are targeting, or build a
+> universal2 binary. The default spec produces a host-architecture build only.
+
+### Dashboards (browser)
+
+| Browser | Status |
+|---|---|
+| Edge (current) | ✅ Supported |
+| Chrome (current) | ✅ Supported |
+| Firefox (current) | ✅ Supported |
+| Safari 14+ (macOS/iPadOS) | ✅ Supported |
+| Internet Explorer | ❌ Not supported |
+
+The dashboards are dependency-free vanilla JS using `fetch`, `async`/`await`,
+optional chaining, `WebSocket`, and blob downloads — all available in every
+browser listed above. WebSocket is used for live notifications with automatic
+fallback to polling, so the dashboards remain functional if a proxy blocks the
+upgrade handshake.
+
+---
+
 ### 1 — Clone
 
 ```bash
@@ -250,8 +298,14 @@ SECRET_KEY=test pytest ../tests/ -v
 
 The suite covers race-safe ticket numbering (including a concurrent-creation
 stress test), RBAC, security headers, magic-byte upload validation, the live-chat
-flow, and the knowledge-base approval workflow. CI runs it on Python 3.10–3.12
-alongside `ruff` and a `bandit` security scan.
+flow, the knowledge-base approval workflow, reverse-proxy header trust, rejection
+of tokens passed in the URL, self-update gating, client credential-store
+migration, and autostart registration. CI runs it on Python 3.10–3.12 alongside
+`ruff` and a `bandit` security scan.
+
+Hitting a problem? See **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** —
+symptom → cause → fix for server startup, TLS, login lockouts, auto-start,
+attachments, and SmartScreen/Gatekeeper/antivirus warnings.
 
 ---
 
@@ -269,6 +323,8 @@ alongside `ruff` and a `bandit` security scan.
 | `RATE_LIMIT_WINDOW_SECONDS` | No | `60` | Rate-limit window |
 | `MAX_UPLOAD_BYTES` | No | `10485760` | Max attachment size (10 MB) |
 | `TICKET_RETENTION_DAYS` | No | `0` | Auto-delete tickets older than N days at 02:00. `0` = keep everything (recommended for auditing). |
+| `TRUSTED_PROXY_IPS` | No | _(unset)_ | Comma-separated reverse-proxy IPs. `X-Forwarded-For` is honoured **only** from these. Unset = key rate limits on the socket peer. Set this if behind a proxy, or all clients share one bucket; leave unset if not, or callers can forge their IP. |
+| `ALLOW_SELF_UPDATE` | No | `false` | Enables the dashboard "Apply Update" button, which pulls code and restarts in place. Off by default — it executes whatever the git remote serves as the server user. |
 
 ---
 
@@ -317,6 +373,10 @@ Distribute the built binary to end-user workstations. The app registers itself f
 - Passwords hashed with bcrypt (min 8 characters enforced)
 - File attachments validated by magic bytes and stored as database blobs — no filesystem exposure
 - `POST /tickets/` is intentionally unauthenticated (required for client app submissions) but rate limited
+- Staff JWTs are accepted **only** in the `Authorization` header, never in a URL query string (WebSocket handshakes excepted — the browser API cannot send headers)
+- `X-Forwarded-For` is trusted only from proxies listed in `TRUSTED_PROXY_IPS`, so the login limiter cannot be bypassed by forging the header
+- In-place self-update is disabled unless `ALLOW_SELF_UPDATE=true`, and is fast-forward only when enabled
+- The desktop client stores its `client_id` in Windows Credential Manager / macOS Keychain, not a plaintext file
 - AI-generated knowledge-base content is never auto-published — it requires admin approval
 
 See [docs/SECURITY_ANALYSIS.md](docs/SECURITY_ANALYSIS.md) for a full security review.
