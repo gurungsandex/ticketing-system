@@ -79,7 +79,7 @@ Reviewed across the backend, both dashboards, and the desktop client.
 | A06 | Insecure Design | ⚠️ By design | `POST /tickets/` and the end-user chat endpoints are deliberately unauthenticated — the desktop client holds no credentials. Mitigated by per-IP rate limiting and by scoping chat reads to a `client_id` that acts as a bearer secret. Anyone who can reach the port can file a ticket; that is the accepted trade-off for frictionless submission. |
 | A07 | Authentication Failures | ✅ Addressed | Per-IP login rate limiting that can no longer be bypassed via a forged `X-Forwarded-For`; bcrypt; 8-hour token expiry plus a 60-minute dashboard idle timeout; tokens in `sessionStorage`, so closing the tab ends the session. |
 | A08 | Software or Data Integrity Failures | ✅ Addressed | Self-update disabled by default; when enabled it is `fetch` + `merge --ff-only`, so it cannot land a half-applied rebase on production. Attachments are validated by magic bytes, not the client-declared MIME type. AI-generated KB content is always a draft and requires admin approval. |
-| A09 | Logging & Alerting Failures | ⚠️ Partly | Ticket bodies, chat messages, and tokens are deliberately kept out of `server.log`. **Open:** there is no audit trail of privileged actions (user creation/deletion, assignment, KB approval) and no alerting on repeated auth failures. |
+| A09 | Logging & Alerting Failures | ⚠️ Partly | Ticket bodies, chat messages, and tokens are deliberately kept out of `server.log`. An append-only audit trail records privileged actions (login success/failure, password change, user create/delete, ticket assignment, KB approval/rejection, chat-session deletion, self-update attempts) with identifiers only — never free text — readable at `GET /audit` by a super_admin and excluded from the retention sweep. **Open:** no automated alerting on repeated auth failures; the trail must be reviewed or shipped to a SIEM. |
 | A10 | Mishandling of Exceptional Conditions | ✅ Addressed | Handlers raise `HTTPException` with safe messages rather than leaking tracebacks; ticket-number allocation retries on contention and fails closed with 503 rather than issuing a duplicate; credential-store migration fails closed, keeping the existing file if the store does not persist. |
 
 ### Automated scanning
@@ -109,7 +109,7 @@ These are accepted or pending a deployment decision, not oversights:
   fixing this requires code-signing certificates.
 - **Unauthenticated ticket submission.** Load-bearing for the desktop client;
   changing it requires a client enrolment mechanism.
-- **No privileged-action audit log.**
+- **No automated alerting.** The audit trail at `GET /audit` records privileged actions, but nothing watches it — repeated `auth.login.failure` entries raise no alarm. Ship it to your SIEM or review it periodically.
 
 ---
 

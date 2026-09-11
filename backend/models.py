@@ -142,6 +142,31 @@ class AppSetting(Base):
     value = Column(Text)
 
 
+# ── Audit trail ───────────────────────────────────────
+
+class AuditLog(Base):
+    """Append-only record of privileged and security-relevant actions.
+
+    Deliberately stores identifiers and outcomes only -- never ticket
+    descriptions, note bodies, chat messages, passwords or tokens. Those are
+    user-submitted free text that may carry personal or sensitive data, and an
+    audit trail is one of the places it must not leak into.
+
+    Rows are never touched by the ticket retention sweep: the point of an audit
+    trail is that it outlives the records it describes.
+    """
+    __tablename__ = "audit_log"
+
+    id         = Column(Integer, primary_key=True, autoincrement=True)
+    created_at = Column(DateTime, default=func.now(), index=True)
+    actor      = Column(Text, index=True)          # username, or "anonymous"
+    action     = Column(Text, nullable=False, index=True)  # e.g. admin.user.delete
+    target     = Column(Text)                      # ticket id / username / session id
+    detail     = Column(Text)                      # short, non-sensitive context
+    ip_address = Column(Text)
+    success    = Column(Boolean, default=True, index=True)
+
+
 # ── Knowledge base ────────────────────────────────────
 
 class KBArticle(Base):

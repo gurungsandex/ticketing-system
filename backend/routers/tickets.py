@@ -2,6 +2,7 @@ import time
 from datetime import date, datetime
 from typing import List, Optional
 
+import audit
 import config
 import models
 import schemas
@@ -366,6 +367,7 @@ async def update_priority(
 async def assign_ticket(
     ticket_id: str,
     body: schemas.TicketAssignUpdate,
+    request: Request,
     db: Session = Depends(get_db),
     _admin: models.AdminUser = Depends(require_super_admin),
 ):
@@ -384,6 +386,9 @@ async def assign_ticket(
 
     msg = f"You have been assigned ticket {ticket_id} — {t.category} ({t.priority or 'normal'} priority)"
     _create_notification(db, body.assigned_to, ticket_id, "assigned", msg)
+    audit.record(db, audit.TICKET_ASSIGN, actor=_admin.username,
+                 target=ticket_id, detail=f"assigned_to={body.assigned_to}",
+                 request=request)
     db.commit()
     db.refresh(t)
 

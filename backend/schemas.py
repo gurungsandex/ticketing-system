@@ -300,3 +300,17 @@ class KBArticleSummary(BaseModel):
     created_by:      Optional[str] = None
     created_at:      Optional[datetime] = None
     model_config = {"from_attributes": True}
+
+
+# ── Audit trail ───────────────────────────────────────
+
+class AuditLogResponse(BaseModel):
+    id:         int
+    created_at: Optional[datetime] = None
+    actor:      Optional[str] = None
+    action:     str
+    target:     Optional[str] = None
+    detail:     Optional[str] = None
+    ip_address: Optional[str] = None
+    success:    bool = True
+    model_config = {"from_attributes": True}

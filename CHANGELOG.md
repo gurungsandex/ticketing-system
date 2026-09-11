@@ -8,6 +8,28 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 
 ## [Unreleased]
 
+### Added — audit trail
+- New append-only `audit_log` table and `GET /audit` (super_admin only, with
+  `action` / `actor` / `success` filters) recording privileged and
+  security-relevant actions: login success and failure, password change, admin
+  user create/delete, ticket assignment, KB approval/rejection, chat-session
+  deletion, and self-update attempts.
+- Records identifiers and outcomes only. Ticket descriptions, note bodies, chat
+  messages, passwords and tokens are never written to it — tests assert that
+  submitted passwords and message bodies do not appear in any entry.
+- Writes commit in the same transaction as the action they describe, so there
+  is no window where an action exists without its record.
+- Excluded from the ticket retention sweep: "who deleted this ticket" must
+  outlive the ticket.
+- No new dependencies; existing SQLAlchemy models and the new table is created
+  by `create_all` on startup, so upgrading needs no migration step.
+
+### Performance
+- `GET /tickets/` ran one COUNT query per ticket to populate `notes_count`,
+  and both dashboards poll it every 20–30s per open tab. Replaced with a single
+  GROUP BY aggregate: a 300-ticket listing went from 302 SQL statements to 3,
+  and the count no longer grows with the table.
+
 ### Security — hardening pass
 - **Rate-limit bypass closed.** `X-Forwarded-For` was trusted unconditionally,
   so any caller could rotate the header and walk past the login brute-force

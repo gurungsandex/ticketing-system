@@ -12,11 +12,14 @@ import subprocess
 import sys
 import threading
 
+import audit
 import config
 import models
 import requests as http_requests
 from auth import require_super_admin
-from fastapi import APIRouter, Depends, HTTPException
+from database import get_db
+from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy.orm import Session
 from utils import utcnow
 
 router = APIRouter()
@@ -144,8 +147,16 @@ def check_for_updates(_admin: models.AdminUser = Depends(require_super_admin)):
 
 
 @router.post("/update/apply")
-def apply_update(_admin: models.AdminUser = Depends(require_super_admin)):
+def apply_update(
+    request: Request,
+    db: Session = Depends(get_db),
+    _admin: models.AdminUser = Depends(require_super_admin),
+):
     if not config.ALLOW_SELF_UPDATE:
+        audit.record(db, audit.UPDATE_APPLY, actor=_admin.username,
+                     detail="refused: ALLOW_SELF_UPDATE is off",
+                     request=request, success=False)
+        db.commit()
         raise HTTPException(
             status_code=403,
             detail=(
@@ -166,11 +177,19 @@ def apply_update(_admin: models.AdminUser = Depends(require_super_admin)):
         )
     success, output = _do_git_pull()
     if not success:
+        audit.record(db, audit.UPDATE_APPLY, actor=_admin.username,
+                     detail="git fast-forward failed", request=request, success=False)
+        db.commit()
         raise HTTPException(status_code=500, detail=f"git pull failed: {output}")
+
+    new_commit = _get_current_commit()
+    audit.record(db, audit.UPDATE_APPLY, actor=_admin.username,
+                 target=new_commit, detail="applied; restarting", request=request)
+    db.commit()
 
     threading.Thread(target=_restart_server, daemon=True).start()
     return {
         "message": "Update applied. Server restarting in ~2 seconds.",
         "git_output": output,
-        "new_commit": _get_current_commit(),
+        "new_commit": new_commit,
     }
