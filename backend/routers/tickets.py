@@ -5,7 +5,14 @@ from typing import List, Optional
 import config
 import models
 import schemas
-from auth import get_current_admin, require_admin_or_assigned, require_super_admin
+from auth import (
+    DOWNLOAD_TOKEN_TTL_SECONDS,
+    create_download_token,
+    get_current_admin,
+    require_admin_or_assigned,
+    require_super_admin,
+    verify_download_token,
+)
 from database import get_db
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import Response
@@ -458,19 +465,53 @@ def get_attachments(
     )
 
 
-@router.get("/attachments/{attachment_id}/download")
-def download_attachment(
+def _authorize_attachment(db: Session, attachment_id: int, user: models.AdminUser):
+    """Return the attachment if this user may read it, else raise."""
+    a = db.query(models.Attachment).filter(models.Attachment.id == attachment_id).first()
+    if not a:
+        raise HTTPException(status_code=404, detail="Attachment not found")
+    t = db.query(models.Ticket).filter(models.Ticket.id == a.ticket_id).first()
+    if t and user.role == "technician" and t.assigned_to != user.username:
+        raise HTTPException(status_code=403, detail="Access denied.")
+    return a
+
+
+@router.post("/attachments/{attachment_id}/download-token")
+def issue_download_token(
     attachment_id: int,
     db: Session = Depends(get_db),
     current_user: models.AdminUser = Depends(get_current_admin),
 ):
-    a = db.query(models.Attachment).filter(models.Attachment.id == attachment_id).first()
-    if not a:
-        raise HTTPException(status_code=404, detail="Attachment not found")
+    """Exchange a session token (sent in the Authorization header) for a
+    short-lived token scoped to this one attachment.
 
-    t = db.query(models.Ticket).filter(models.Ticket.id == a.ticket_id).first()
-    if t and current_user.role == "technician" and t.assigned_to != current_user.username:
-        raise HTTPException(status_code=403, detail="Access denied.")
+    The dashboard puts *this* token in the download URL instead of the session
+    JWT, so the value that leaks into browser history, access logs and proxy
+    logs is useless within a minute and grants nothing but this one file.
+    """
+    _authorize_attachment(db, attachment_id, current_user)
+    return {
+        "token": create_download_token(current_user.username, attachment_id),
+        "expires_in": DOWNLOAD_TOKEN_TTL_SECONDS,
+    }
+
+
+@router.get("/attachments/{attachment_id}/download")
+def download_attachment(
+    attachment_id: int,
+    token: str = Query(..., description="Short-lived token from /download-token"),
+    db: Session = Depends(get_db),
+):
+    # Authorisation is re-checked against the live database on every download:
+    # a token minted before a technician was unassigned must not still work.
+    username = verify_download_token(token, attachment_id)
+    user = db.query(models.AdminUser).filter(
+        models.AdminUser.username == username
+    ).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+
+    a = _authorize_attachment(db, attachment_id, user)
 
     safe = a.filename.replace('"', '\\"').replace("\n", "").replace("\r", "")
     return Response(
@@ -480,5 +521,7 @@ def download_attachment(
             "Content-Disposition": f'attachment; filename="{safe}"',
             "X-Content-Type-Options": "nosniff",
             "Cache-Control": "no-store",
+            # Keep the token out of the Referer of anything this response leads to.
+            "Referrer-Policy": "no-referrer",
         },
     )

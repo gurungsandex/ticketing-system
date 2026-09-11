@@ -839,10 +839,19 @@ async function loadAttachments(id){
   }catch{el.innerHTML=`<div class="muted sm">Error loading attachments.</div>`;}
 }
 
-function downloadAttachment(id, filename){
+async function downloadAttachment(id, filename){
+  // The session token never goes in a URL: URLs land in browser history,
+  // access logs and proxy logs. Instead we exchange it (over the Authorization
+  // header) for a token that is scoped to this one attachment and expires in
+  // about a minute, and put that in the link.
+  let dl;
+  try{
+    dl = await apiFetch("/attachments/"+id+"/download-token",
+                        {method:"POST",headers:authH()});
+  }catch(e){ alert("Could not start download: "+e.message); return; }
   const url = API.replace(/\/$/,"")
     + "/attachments/" + id + "/download"
-    + "?token=" + encodeURIComponent(S.token);
+    + "?token=" + encodeURIComponent(dl.token);
   const a = document.createElement("a");
   a.href     = url;
   a.download = filename || "attachment";
