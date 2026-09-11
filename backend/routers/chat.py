@@ -528,12 +528,42 @@ async def close_chat_staff(
     return {"status": "closed"}
 
 
-# ── WebSocket: staff real-time chat channel ───────────
+# ══════════════════════════════════════════════════════
+#  Live chat — real-time WebSocket channels
+# ══════════════════════════════════════════════════════
+#
+# Both sides subscribe to the same per-session topic and receive every message
+# the moment it is stored, instead of discovering it on the next poll. REST
+# polling is deliberately left in place on both clients as a fallback: if the
+# socket cannot be established or drops, the conversation keeps working at the
+# old cadence rather than silently stalling.
+#
+# Sending still goes over REST. That keeps a single authorisation path for
+# writes — the socket only ever pushes — so a bug in socket handling cannot
+# become a way to post as someone else.
+
+TYPING_EVENT = "typing"
+
+
+async def _relay_typing(websocket: WebSocket, session_id: str,
+                        sender_role: str, sender_name: str) -> None:
+    """Tell the other side that someone is composing.
+
+    Not persisted and not notified on — purely ephemeral presence within an
+    open conversation.
+    """
+    await chat_hub.publish(session_id, {
+        "type": TYPING_EVENT,
+        "session_id": session_id,
+        "sender_role": sender_role,
+        "sender_name": sender_name,
+    })
+
 
 @router.websocket("/ws/chat/{session_id}")
 async def ws_chat(websocket: WebSocket, session_id: str, token: str = Query(...),
                   db: Session = Depends(get_db)):
-    """Authenticated staff channel for a chat session. End users use REST polling."""
+    """Authenticated staff channel for a chat session."""
     try:
         payload = decode_token(token)
         username = payload.get("sub")
@@ -545,11 +575,47 @@ async def ws_chat(websocket: WebSocket, session_id: str, token: str = Query(...)
         await websocket.close(code=4001)
         return
 
+    if not db.query(models.ChatSession).filter(
+            models.ChatSession.id == session_id).first():
+        await websocket.close(code=4004)
+        return
+
     await chat_hub.subscribe(websocket, session_id)
     try:
         while True:
             data = await websocket.receive_text()
             if data == "ping":
                 await websocket.send_json({"type": "pong"})
+            elif data == TYPING_EVENT:
+                await _relay_typing(websocket, session_id, "agent", username)
+    except WebSocketDisconnect:
+        chat_hub.unsubscribe(websocket, session_id)
+
+
+@router.websocket("/ws/chat/client/{session_id}")
+async def ws_chat_client(websocket: WebSocket, session_id: str,
+                         client_id: str = Query(...),
+                         db: Session = Depends(get_db)):
+    """End-user channel, scoped by the same (session id + client_id) pair the
+    REST endpoints use — a caller can only attach to a session they own."""
+    session = db.query(models.ChatSession).filter(
+        models.ChatSession.id == session_id
+    ).first()
+    if not session or session.client_id != client_id:
+        # Same response for "no such session" and "not yours", so the socket
+        # cannot be used to probe which session ids exist.
+        await websocket.close(code=4004)
+        return
+
+    await chat_hub.subscribe(websocket, session_id)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            if data == "ping":
+                await websocket.send_json({"type": "pong"})
+            elif data == TYPING_EVENT:
+                await _relay_typing(
+                    websocket, session_id, "user", session.display_name or "User"
+                )
     except WebSocketDisconnect:
         chat_hub.unsubscribe(websocket, session_id)

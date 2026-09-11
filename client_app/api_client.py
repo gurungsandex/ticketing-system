@@ -193,3 +193,24 @@ def get_client_version() -> dict:
         return r.json()
     except Exception:
         return {}
+
+
+def chat_ws_url(session_id: str, client_id: str) -> str:
+    """WebSocket URL for this client's live chat session.
+
+    Scoped by the same (session id + client_id) pair the REST endpoints use, so
+    the socket grants nothing the polling path did not already grant.
+    """
+    from urllib.parse import quote
+
+    base = _base()
+    # An https server must be reached over wss, or the browser-equivalent
+    # upgrade is refused and the client silently falls back to polling forever.
+    if base.startswith("https://"):
+        ws_base = "wss://" + base[len("https://"):]
+    elif base.startswith("http://"):
+        ws_base = "ws://" + base[len("http://"):]
+    else:
+        ws_base = base
+    return (f"{ws_base}/ws/chat/client/{quote(session_id)}"
+            f"?client_id={quote(client_id)}")

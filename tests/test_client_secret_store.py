@@ -188,3 +188,30 @@ def test_client_id_migrates_from_legacy_file(with_keyring, client_env):
                                           encoding="utf-8")
 
     assert client_id.get_client_id() == "11111111-2222-3333-4444-555555555555"
+
+
+# ── Chat WebSocket URL construction ───────────────────
+
+def test_chat_ws_url_scheme_mapping(client_env, monkeypatch):
+    """https must map to wss. Getting this wrong makes every TLS deployment
+    fall back to polling silently, which is exactly the bug this feature
+    exists to remove."""
+    import api_client
+
+    monkeypatch.setattr(api_client, "_base", lambda: "https://helpdesk.example:8443")
+    url = api_client.chat_ws_url("sess-1", "client-1")
+    assert url.startswith("wss://helpdesk.example:8443/ws/chat/client/sess-1")
+    assert "client_id=client-1" in url
+
+    monkeypatch.setattr(api_client, "_base", lambda: "http://192.168.1.50:8000")
+    assert api_client.chat_ws_url("s", "c").startswith("ws://192.168.1.50:8000/")
+
+
+def test_chat_ws_url_escapes_identifiers(client_env, monkeypatch):
+    """Ids go into a URL path and query, so they must be percent-encoded."""
+    import api_client
+
+    monkeypatch.setattr(api_client, "_base", lambda: "http://h:8000")
+    url = api_client.chat_ws_url("a/b", "c&d=e")
+    assert "a/b" not in url.split("?")[0].rsplit("/", 1)[-1]
+    assert "&d=e" not in url
