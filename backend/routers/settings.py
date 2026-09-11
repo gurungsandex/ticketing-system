@@ -1,14 +1,13 @@
 import os
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-from fastapi.responses import FileResponse
-from sqlalchemy.orm import Session
-
 import models
 import schemas
 from auth import require_super_admin
 from database import get_db
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 from security import detect_content_type
+from sqlalchemy.orm import Session
 
 router = APIRouter()
 

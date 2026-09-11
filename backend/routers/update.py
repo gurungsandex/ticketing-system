@@ -11,12 +11,12 @@ import os
 import subprocess
 import sys
 import threading
-from datetime import datetime
 
 import models
 import requests as http_requests
 from auth import require_super_admin
 from fastapi import APIRouter, Depends, HTTPException
+from utils import utcnow
 
 router = APIRouter()
 
@@ -107,7 +107,7 @@ def check_for_updates(_admin: models.AdminUser = Depends(require_super_admin)):
             GITHUB_REPO != "YOUR_ORG/YOUR_REPO"
             and latest.get("tag", "unknown") not in ("unknown", "not configured", CURRENT_VERSION)
         ),
-        "checked_at": datetime.utcnow().isoformat(),
+        "checked_at": utcnow().isoformat(),
     }
 
 

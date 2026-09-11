@@ -2,10 +2,9 @@ import sys
 import os
 from typing import Optional
 
-from PySide6.QtCore import Qt, QRect, QPoint, QSize, QMimeData, QUrl
+from PySide6.QtCore import Qt, QRect, QPoint, QSize, QUrl
 from PySide6.QtGui import (
     QColor, QPainter, QBrush, QPen, QFont, QIcon, QPixmap, QDesktopServices,
-    QDragEnterEvent, QDropEvent,
 )
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
