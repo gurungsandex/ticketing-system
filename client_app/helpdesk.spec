@@ -13,6 +13,8 @@ a = Analysis(
         'requests',
         'uuid',
         'socket',
+        'autostart',
+        'single_instance',
         'winreg',
     ],
     hookspath=[],
