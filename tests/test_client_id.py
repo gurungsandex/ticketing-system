@@ -5,16 +5,19 @@ These run without PySide6 or a real keyring backend: the client_app directory
 is put on sys.path and the credential store is faked, so the migration logic is
 exercised on any CI box.
 """
-import sys
+import importlib.util
 import uuid
 from pathlib import Path
 
 import pytest
 
-CLIENT_APP = Path(__file__).resolve().parent.parent / "client_app"
-sys.path.insert(0, str(CLIENT_APP))
-
-import client_id as cid_mod  # noqa: E402
+# Load client_app/client_id.py directly by path. client_app/ must NOT go on
+# sys.path: it contains main.py, config.py and settings.py, which would shadow
+# the backend modules of the same name for every other test in this suite.
+_SRC = Path(__file__).resolve().parent.parent / "client_app" / "client_id.py"
+_spec = importlib.util.spec_from_file_location("_client_id_under_test", _SRC)
+cid_mod = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(cid_mod)
 
 
 class FakeKeyring:
