@@ -1,17 +1,28 @@
 """
 End-user live chat window.
 
-Uses REST polling (consistent with the rest of the client) so it works through
-the same firewall/proxy path as ticket submission — no separate WebSocket port
-to open. Messages are scoped to this client's session id + client_id.
+Messages arrive over a WebSocket on the same host and port as the REST API, so
+no additional firewall rule is needed. REST polling is kept underneath at a
+slower cadence: where a proxy refuses the upgrade, the conversation degrades to
+the previous behaviour instead of silently going quiet.
+
+Sending always goes over REST, so there is one authorisation path for writes.
+Messages are scoped to this client's session id + client_id either way.
 """
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import QTimer, QUrl, Qt
 from PySide6.QtWidgets import (
     QDialog, QHBoxLayout, QLabel, QLineEdit, QPushButton, QScrollArea,
     QVBoxLayout, QWidget,
 )
 
 import api_client
+
+try:
+    from PySide6.QtWebSockets import QWebSocket
+    _WEBSOCKETS_AVAILABLE = True
+except ImportError:  # pragma: no cover - depends on the Qt build
+    QWebSocket = None
+    _WEBSOCKETS_AVAILABLE = False
 
 
 class ChatDialog(QDialog):
@@ -29,10 +40,15 @@ class ChatDialog(QDialog):
         self.setMinimumSize(420, 520)
         self._build_ui()
 
+        self._ws = None
+        self._ws_connected = False
+
         self._start()
 
+        # Fallback poll. Slow while the socket is healthy; it is what keeps the
+        # conversation working if the upgrade is refused or the socket drops.
         self._timer = QTimer(self)
-        self._timer.setInterval(2500)
+        self._timer.setInterval(15000)
         self._timer.timeout.connect(self._poll)
         self._timer.start()
 
@@ -61,11 +77,18 @@ class ChatDialog(QDialog):
         self._scroll.setWidget(self._msg_container)
         root.addWidget(self._scroll, 1)
 
+        self._typing_label = QLabel("")
+        self._typing_label.setStyleSheet(
+            "color:#94A3B8;font-size:11px;font-style:italic;padding:2px 14px 4px;")
+        self._typing_label.setVisible(False)
+        root.addWidget(self._typing_label)
+
         input_row = QWidget(); input_row.setObjectName("chatInputRow")
         il = QHBoxLayout(input_row); il.setContentsMargins(10, 8, 10, 10); il.setSpacing(6)
         self._input = QLineEdit(); self._input.setPlaceholderText("Type your message…")
         self._input.setFixedHeight(36)
         self._input.returnPressed.connect(self._send)
+        self._input.textEdited.connect(lambda _t: self._notify_typing())
         il.addWidget(self._input)
         send = QPushButton("Send"); send.setObjectName("chatSend"); send.setFixedHeight(36)
         send.clicked.connect(self._send)
@@ -133,6 +156,7 @@ class ChatDialog(QDialog):
         else:
             self._status.setText("Connected")
         self._poll()
+        self._open_socket()
 
     def _poll(self):
         if not self._session_id:
@@ -151,6 +175,99 @@ class ChatDialog(QDialog):
             self._add_bubble(m["sender_role"], m.get("sender_name", ""), m["content"])
             self._last_id = max(self._last_id, m["id"])
 
+    # ── Real-time socket ──────────────────────────────
+
+    def _open_socket(self):
+        """Best-effort. Any failure leaves the poll timer as the sole path,
+        which is exactly how this dialog behaved before."""
+        if not _WEBSOCKETS_AVAILABLE or not self._session_id:
+            return
+        try:
+            self._ws = QWebSocket()
+            self._ws.connected.connect(self._on_ws_connected)
+            self._ws.disconnected.connect(self._on_ws_disconnected)
+            self._ws.textMessageReceived.connect(self._on_ws_message)
+            self._ws.errorOccurred.connect(lambda _err: self._on_ws_disconnected())
+            self._ws.open(QUrl(api_client.chat_ws_url(self._session_id, self._client_id)))
+        except Exception:
+            self._ws = None
+
+    def _on_ws_connected(self):
+        self._ws_connected = True
+        # Keep the connection alive through idle-timeout proxies.
+        self._ping = QTimer(self)
+        self._ping.setInterval(25000)
+        self._ping.timeout.connect(self._send_ping)
+        self._ping.start()
+
+    def _send_ping(self):
+        if self._ws is not None and self._ws_connected:
+            try:
+                self._ws.sendTextMessage("ping")
+            except Exception:
+                pass
+
+    def _on_ws_disconnected(self):
+        self._ws_connected = False
+        # The 15s poll keeps running regardless, so nothing is lost here.
+
+    def _on_ws_message(self, raw: str):
+        import json
+        try:
+            data = json.loads(raw)
+        except ValueError:
+            return
+        kind = data.get("type")
+        if kind == "pong":
+            return
+        if kind == "typing":
+            if data.get("sender_role") == "agent":
+                self._show_typing(data.get("sender_name") or "IT Support")
+            return
+        if kind == "closed":
+            self._status.setText("Chat ended")
+            self._input.setEnabled(False)
+            return
+        if kind == "message":
+            mid = data.get("id")
+            # The poll may have already rendered it; ids are monotonic.
+            if mid is not None and mid <= self._last_id:
+                return
+            self._hide_typing()
+            self._add_bubble(data.get("sender_role", "agent"),
+                             data.get("sender_name", ""), data.get("content", ""))
+            if mid is not None:
+                self._last_id = max(self._last_id, mid)
+            if data.get("sender_role") == "agent":
+                self._status.setText("Connected")
+
+    def _notify_typing(self):
+        """One notice per 2s of continuous typing — enough to drive the
+        indicator without a frame per keystroke."""
+        import time
+        if not (self._ws is not None and self._ws_connected):
+            return
+        now = time.monotonic()
+        if now - getattr(self, "_typing_sent", 0) < 2.0:
+            return
+        self._typing_sent = now
+        try:
+            self._ws.sendTextMessage("typing")
+        except Exception:
+            pass
+
+    def _show_typing(self, who: str):
+        self._typing_label.setText(f"{who} is typing…")
+        self._typing_label.setVisible(True)
+        if not hasattr(self, "_typing_clear"):
+            self._typing_clear = QTimer(self)
+            self._typing_clear.setSingleShot(True)
+            self._typing_clear.timeout.connect(self._hide_typing)
+        self._typing_clear.start(4000)
+
+    def _hide_typing(self):
+        self._typing_label.setVisible(False)
+
     def _send(self):
         text = self._input.text().strip()
         if not text or not self._session_id:
@@ -165,6 +282,11 @@ class ChatDialog(QDialog):
     def closeEvent(self, event):
         try:
             self._timer.stop()
+            if self._ws is not None:
+                try:
+                    self._ws.close()
+                except Exception:
+                    pass
             if self._session_id:
                 api_client.close_chat(self._session_id, self._client_id)
         except Exception:

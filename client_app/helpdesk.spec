@@ -10,6 +10,7 @@ a = Analysis(
         'PySide6.QtGui',
         'PySide6.QtWidgets',
         'PySide6.QtNetwork',
+        'PySide6.QtWebSockets',
         'requests',
         'uuid',
         'socket',
