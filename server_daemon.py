@@ -3,9 +3,9 @@ IT Ticketing System — Windows background server daemon.
 Launched by setup.bat via pythonw.exe (no console window).
 Restarts uvicorn automatically if it crashes.
 """
+import os
 import subprocess
 import sys
-import os
 import time
 from pathlib import Path
 
