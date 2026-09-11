@@ -4,6 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>IT Ticketing System — Admin</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%F0%9F%8E%AB%3C/text%3E%3C/svg%3E">
 <style>
 :root{
   /* --blue kept as primary alias so JS `$("topbar").style.background="var(--blue)"` resolves to teal */
@@ -862,12 +863,19 @@ textarea.note-inp:focus{border-color:var(--blue)}
 
 <script>
 // ═══════════════════════════════════════════
-//  CONFIG  ← set your server IP/URL here
+//  CONFIG
 // ═══════════════════════════════════════════
-const API = "http://localhost:8000";
-// Examples:
-//   const API = "http://192.168.1.50:8000";      // LAN
-//   const API = "http://localhost:8000";           // same machine
+// The panel is normally served by the backend itself (/admin, /tech), so it
+// talks to whatever origin it was loaded from. That makes it work from any
+// machine on the network with no editing, and keeps every request same-origin
+// — which is also why CORS is not needed in the normal deployment.
+//
+// A hardcoded value is only used when the file is opened directly from disk
+// (file://), where there is no origin to inherit. Set API_FALLBACK for that.
+const API_FALLBACK = "http://localhost:8000";
+const API = (location.protocol === "http:" || location.protocol === "https:")
+  ? location.origin
+  : API_FALLBACK;
 
 // ═══════════════════════════════════════════
 //  Session
@@ -900,9 +908,12 @@ function loadSession(){
 }
 function saveSession(data){
   const obj = {...data, expiresAt: Date.now() + IDLE_TIMEOUT_MS};
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify(obj));
+  // Safari private mode and locked-down profiles throw on write. Losing
+  // persistence across a refresh is acceptable; an uncaught exception that
+  // breaks login is not.
+  try{ sessionStorage.setItem(SESSION_KEY, JSON.stringify(obj)); }catch{}
 }
-function clearSession(){ sessionStorage.removeItem(SESSION_KEY); }
+function clearSession(){ try{ sessionStorage.removeItem(SESSION_KEY); }catch{} }
 
 function resetIdle(){
   clearTimeout(idleTimer);
@@ -1004,8 +1015,12 @@ async function doLogin(){
   const u=$("lu").value.trim(), p=$("lp").value;
   hide("loginErr");
   if(!u||!p){showLE("Please enter both username and password.");return;}
+  // Only reachable when the file was opened from disk and API_FALLBACK was
+  // never set — served from the backend, API is the page's own origin.
   if(API.includes("YOUR_SERVER_IP")){
-    showLE("❌ Not configured: open admin_panel/index.html and set the API URL at the top of the <script> section.\nExample: const API = \"http://192.168.1.50:8000\"");
+    showLE("❌ Not configured: this page was opened from a file instead of from "
+      + "the server. Browse to http://YOUR-SERVER:8000/admin, or set API_FALLBACK "
+      + "at the top of the <script> section.");
     return;
   }
   const loginBtn = document.querySelector('button[onclick="doLogin()"]');
@@ -1076,7 +1091,17 @@ window.addEventListener("load",()=>{ applyBranding(); if(S.token) initDashboard(
 // ═══════════════════════════════════════════
 //  Branding (custom logo)
 // ═══════════════════════════════════════════
-function applyBranding(){
+async function applyBranding(){
+  // Ask whether a logo exists before requesting it. Probing the image
+  // directly logged a 404 in every admin's console on every page load when no
+  // custom logo was configured, which reads like a fault and is not one.
+  try{
+    const status = await fetch(API.replace(/\/$/,"") + "/branding");
+    if(!status.ok) return;
+    const d = await status.json();
+    if(!d.logo_configured) return;   // keep the default emoji in the markup
+  }catch{ return; }
+
   const url = API.replace(/\/$/,"") + "/branding/logo?t=" + Date.now();
   const test = new Image();
   test.onload = ()=>{
@@ -1084,7 +1109,7 @@ function applyBranding(){
       el.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:contain;border-radius:inherit"/>`;
     });
   };
-  test.onerror = ()=>{ /* no custom logo configured — keep the default emoji already in the markup */ };
+  test.onerror = ()=>{};
   test.src = url;
 }
 $("lp").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});

@@ -4,6 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>IT Ticketing System — Technician</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%F0%9F%8E%AB%3C/text%3E%3C/svg%3E">
 <style>
 :root{
   --blue:#0D9488;--blue-dk:#0F766E;--blue-lt:#F0FDFA;
@@ -586,9 +587,19 @@ textarea.note-inp:focus{border-color:var(--blue)}
 
 <script>
 // ═══════════════════════════════════════════
-//  CONFIG — set your server IP here
+//  CONFIG
 // ═══════════════════════════════════════════
-const API = "http://localhost:8000";
+// The panel is normally served by the backend itself (/admin, /tech), so it
+// talks to whatever origin it was loaded from. That makes it work from any
+// machine on the network with no editing, and keeps every request same-origin
+// — which is also why CORS is not needed in the normal deployment.
+//
+// A hardcoded value is only used when the file is opened directly from disk
+// (file://), where there is no origin to inherit. Set API_FALLBACK for that.
+const API_FALLBACK = "http://localhost:8000";
+const API = (location.protocol === "http:" || location.protocol === "https:")
+  ? location.origin
+  : API_FALLBACK;
 
 // ═══════════════════════════════════════════
 //  Session
@@ -613,8 +624,10 @@ function loadSession(){
     return obj;
   }catch{return{token:null,role:null,user:null};}
 }
-function saveSession(d){sessionStorage.setItem(SESSION_KEY,JSON.stringify({...d,expiresAt:Date.now()+IDLE_MS}));}
-function clearSession(){sessionStorage.removeItem(SESSION_KEY);}
+// Safari private mode and locked-down profiles throw on write; losing
+// persistence is acceptable, an uncaught exception breaking login is not.
+function saveSession(d){try{sessionStorage.setItem(SESSION_KEY,JSON.stringify({...d,expiresAt:Date.now()+IDLE_MS}));}catch{}}
+function clearSession(){try{sessionStorage.removeItem(SESSION_KEY);}catch{}}
 
 // ═══════════════════════════════════════════
 //  Utilities
@@ -706,7 +719,17 @@ function showPage(p){
 
 window.addEventListener("load",()=>{applyBranding();if(S.token)initDashboard();});
 
-function applyBranding(){
+async function applyBranding(){
+  // Ask whether a logo exists before requesting it. Probing the image
+  // directly logged a 404 in every admin's console on every page load when no
+  // custom logo was configured, which reads like a fault and is not one.
+  try{
+    const status = await fetch(API.replace(/\/$/,"") + "/branding");
+    if(!status.ok) return;
+    const d = await status.json();
+    if(!d.logo_configured) return;   // keep the default emoji in the markup
+  }catch{ return; }
+
   const url = API.replace(/\/$/,"") + "/branding/logo?t=" + Date.now();
   const test = new Image();
   test.onload = ()=>{
